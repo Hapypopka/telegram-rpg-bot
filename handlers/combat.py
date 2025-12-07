@@ -1,0 +1,551 @@
+"""
+Обработчики боевой системы
+"""
+
+import random
+import asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
+from data import CLASSES, DUNGEONS, ITEMS
+from utils.storage import get_player, save_data
+from utils.helpers import update_fight_ui, create_hp_bar
+from .dungeon import get_active_fight, remove_active_fight, active_fights
+
+
+async def fight_attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обычная атака"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+    fight = get_active_fight(query.from_user.id)
+
+    if not fight or not fight.fight_active:
+        await query.answer("Бой не активен!", show_alert=True)
+        return
+
+    # Рассчитать урон
+    base_damage = player.get_total_damage()
+
+    # Бонусы от еды и наёмника
+    base_damage += fight.food_bonus_damage + fight.merc_bonus_damage
+
+    # Крит
+    crit_chance = player.get_crit_chance() + fight.food_bonus_crit + fight.merc_bonus_crit
+    is_crit = random.randint(1, 100) <= crit_chance
+
+    if is_crit:
+        damage = int(base_damage * 1.5)
+        fight.fight_log.append(f"💥 Критический удар! -{damage} HP")
+        player.stats["crits"] = player.stats.get("crits", 0) + 1
+    else:
+        damage = base_damage
+        fight.fight_log.append(f"⚔️ Атака! -{damage} HP")
+
+    # Первая атака для сета Убийцы
+    if fight.first_attack and player.count_legendary_pieces() >= 2:
+        from data import LEGENDARY_SETS
+        if player.player_class == "rogue":
+            damage *= 3
+            fight.fight_log.append("🗡️ Первый удар x3!")
+    fight.first_attack = False
+
+    # Нанести урон
+    fight.enemy_hp -= damage
+
+    # Проверить смерть врага
+    if fight.enemy_hp <= 0:
+        await end_fight(query, fight, player, victory=True)
+        return
+
+    # Вампиризм
+    lifesteal = player.get_lifesteal()
+    if lifesteal > 0:
+        heal = int(damage * lifesteal)
+        fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
+        fight.fight_log.append(f"🩸 Вампиризм +{heal} HP")
+
+    # Эффекты от оружия
+    weapon = player.equipment.get("weapon")
+    if weapon:
+        item_data = ITEMS.get(weapon, {})
+        if "burn" in item_data:
+            fight.enemy_effects["burn"] = item_data["burn"]
+
+    # Атака врага
+    await process_enemy_attack(query, fight, player)
+
+
+async def fight_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Блок"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+    fight = get_active_fight(query.from_user.id)
+
+    if not fight or not fight.fight_active:
+        return
+
+    fight.block_next = True
+    fight.fight_log.append("🛡️ Готовишь блок...")
+
+    await process_enemy_attack(query, fight, player)
+
+
+async def fight_skill(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Использовать скилл"""
+    query = update.callback_query
+
+    skill_id = query.data.replace("fight_skill_", "")
+    player = get_player(query.from_user.id)
+    fight = get_active_fight(query.from_user.id)
+
+    if not fight or not fight.fight_active:
+        await query.answer("Бой не активен!", show_alert=True)
+        return
+
+    # Проверить класс и скилл
+    if not player.player_class:
+        return
+
+    class_data = CLASSES[player.player_class]
+    skills = class_data.get("skills", {})
+
+    if skill_id not in skills:
+        await query.answer("Скилл не найден!", show_alert=True)
+        return
+
+    skill = skills[skill_id]
+
+    # Проверить кулдаун
+    if fight.cooldowns.get(skill_id, 0) > 0:
+        await query.answer(f"Кулдаун: {fight.cooldowns[skill_id]} ходов", show_alert=True)
+        return
+
+    # Проверить ману
+    mana_cost = skill.get("mana", 0)
+
+    # Бонус сета мага
+    if player.player_class == "mage" and player.count_legendary_pieces() >= 4:
+        mana_cost = int(mana_cost * 0.7)
+
+    if fight.player_mana < mana_cost:
+        await query.answer("Недостаточно маны!", show_alert=True)
+        return
+
+    await query.answer()
+
+    # Потратить ману
+    fight.player_mana -= mana_cost
+
+    # Установить кулдаун
+    fight.cooldowns[skill_id] = skill.get("cooldown", 0)
+
+    # Применить эффект скилла
+    fight.fight_log.append(f"{skill['emoji']} {skill['name']}!")
+
+    base_damage = player.get_total_damage()
+    total_damage = 0
+
+    # Урон с множителем
+    if "damage_mult" in skill:
+        mult = skill["damage_mult"]
+        hits = skill.get("hits", 1)
+
+        for _ in range(hits):
+            damage = int(base_damage * mult)
+            total_damage += damage
+
+        fight.enemy_hp -= total_damage
+
+        if hits > 1:
+            fight.fight_log.append(f"💥 {hits} ударов, всего -{total_damage} HP")
+        else:
+            fight.fight_log.append(f"💥 -{total_damage} HP")
+
+    # Оглушение
+    if "stun" in skill:
+        fight.enemy_effects["stun"] = skill["stun"]
+        fight.fight_log.append(f"⚡ Оглушение {skill['stun']} ходов")
+
+    # Замедление
+    if "slow" in skill:
+        fight.enemy_effects["slow"] = skill["slow"]
+        fight.fight_log.append("❄️ Враг замедлен")
+
+    # Яд
+    if "poison" in skill:
+        fight.enemy_effects["poison"] = skill.get("poison_duration", 3)
+        fight.fight_log.append(f"☠️ Яд {skill['poison']} урона")
+
+    # Блок
+    if skill.get("block"):
+        fight.block_next = True
+        fight.fight_log.append("🛡️ Блок активирован!")
+
+    # Уклонение
+    if skill.get("dodge"):
+        fight.dodge_next = True
+        fight.fight_log.append("💨 Готов к уклонению!")
+
+    # Барьер/поглощение
+    if "absorb" in skill:
+        fight.barrier += skill["absorb"]
+        fight.fight_log.append(f"🔮 Барьер +{skill['absorb']}")
+
+    # Лечение
+    if "heal" in skill:
+        heal = skill["heal"]
+        # Бонус паладина
+        if player.player_class == "paladin" and player.count_legendary_pieces() >= 2:
+            heal = int(heal * 1.3)
+        fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
+        fight.fight_log.append(f"💚 +{heal} HP")
+
+    # Очищение дебаффов
+    if skill.get("cleanse"):
+        fight.player_effects.clear()
+        fight.fight_log.append("✨ Дебаффы сняты!")
+
+    # Невидимость
+    if "invisibility" in skill:
+        fight.invisible = skill["invisibility"]
+        fight.fight_log.append(f"👻 Невидимость {fight.invisible} ходов")
+
+    # Неуязвимость
+    if "invulnerable" in skill:
+        fight.invulnerable = skill["invulnerable"]
+        fight.fight_log.append(f"👼 Неуязвимость {fight.invulnerable} ходов")
+
+    # Вампиризм
+    if "lifesteal" in skill and total_damage > 0:
+        heal = int(total_damage * skill["lifesteal"])
+        fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
+        fight.fight_log.append(f"🩸 +{heal} HP от вампиризма")
+
+    # Проверить смерть врага
+    if fight.enemy_hp <= 0:
+        await end_fight(query, fight, player, victory=True)
+        return
+
+    # Атака врага
+    await process_enemy_attack(query, fight, player)
+
+
+async def fight_potion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Использовать зелье"""
+    query = update.callback_query
+
+    potion_type = query.data.replace("fight_potion_", "")
+    player = get_player(query.from_user.id)
+    fight = get_active_fight(query.from_user.id)
+
+    if not fight or not fight.fight_active:
+        return
+
+    if potion_type == "hp":
+        # Найти лучшее зелье HP
+        potions = ["hp_potion_large", "hp_potion_medium", "hp_potion_small"]
+        for pot in potions:
+            if player.inventory.get(pot, 0) > 0:
+                player.inventory[pot] -= 1
+                heal = ITEMS[pot].get("heal", 50)
+                fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
+                fight.fight_log.append(f"❤️ Зелье HP +{heal}")
+                await query.answer(f"+{heal} HP!")
+                break
+        else:
+            await query.answer("Нет зелий HP!", show_alert=True)
+            return
+
+    elif potion_type == "mana":
+        potions = ["mana_potion_medium", "mana_potion_small"]
+        for pot in potions:
+            if player.inventory.get(pot, 0) > 0:
+                player.inventory[pot] -= 1
+                mana = ITEMS[pot].get("mana", 30)
+                fight.player_mana = min(fight.player_mana + mana, player.get_max_mana())
+                fight.fight_log.append(f"💙 Зелье маны +{mana}")
+                await query.answer(f"+{mana} маны!")
+                break
+        else:
+            await query.answer("Нет зелий маны!", show_alert=True)
+            return
+
+    save_data()
+    await process_enemy_attack(query, fight, player)
+
+
+async def fight_flee(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Сбежать из боя"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+    fight = get_active_fight(query.from_user.id)
+
+    if not fight:
+        return
+
+    # 50% шанс побега
+    if random.randint(1, 100) <= 50:
+        fight.fight_active = False
+        remove_active_fight(query.from_user.id)
+
+        player.current_dungeon = None
+        player.current_floor = 0
+        save_data()
+
+        keyboard = [[InlineKeyboardButton("🏠 В меню", callback_data="menu")]]
+        await query.edit_message_text(
+            "🏃 Ты успешно сбежал!\n\nПрогресс подземелья потерян.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        fight.fight_log.append("🏃 Побег не удался!")
+        await process_enemy_attack(query, fight, player)
+
+
+async def process_enemy_attack(query, fight, player):
+    """Обработать атаку врага"""
+    if not fight.fight_active:
+        return
+
+    # Уменьшить кулдауны
+    for skill_id in list(fight.cooldowns.keys()):
+        if fight.cooldowns[skill_id] > 0:
+            fight.cooldowns[skill_id] -= 1
+
+    # Регенерация маны
+    mana_regen = 5 + fight.food_bonus_mana_regen + fight.merc_bonus_mana_regen
+    fight.player_mana = min(fight.player_mana + mana_regen, player.get_max_mana())
+
+    # Хил от наёмника
+    if fight.merc_bonus_heal > 0:
+        fight.player_hp = min(fight.player_hp + fight.merc_bonus_heal, fight.player_max_hp)
+
+    # Эффекты на враге
+    if "burn" in fight.enemy_effects:
+        burn_dmg = fight.enemy_effects["burn"] * 3
+        fight.enemy_hp -= burn_dmg
+        fight.enemy_effects["burn"] -= 1
+        if fight.enemy_effects["burn"] <= 0:
+            del fight.enemy_effects["burn"]
+        fight.fight_log.append(f"🔥 Враг горит -{burn_dmg} HP")
+
+    if "bleed" in fight.enemy_effects:
+        bleed_dmg = fight.enemy_effects["bleed"] * 5
+        fight.enemy_hp -= bleed_dmg
+        fight.enemy_effects["bleed"] -= 1
+        if fight.enemy_effects["bleed"] <= 0:
+            del fight.enemy_effects["bleed"]
+        fight.fight_log.append(f"🩸 Кровотечение -{bleed_dmg} HP")
+
+    # Проверить смерть врага от эффектов
+    if fight.enemy_hp <= 0:
+        await end_fight(query, fight, player, victory=True)
+        return
+
+    # Оглушение врага
+    if "stun" in fight.enemy_effects:
+        fight.enemy_effects["stun"] -= 1
+        if fight.enemy_effects["stun"] <= 0:
+            del fight.enemy_effects["stun"]
+        fight.fight_log.append("⚡ Враг оглушён!")
+        await update_fight_ui(query, fight, player)
+        return
+
+    # Невидимость - враг не атакует
+    if fight.invisible > 0:
+        fight.invisible -= 1
+        fight.fight_log.append("👁️ Враг не видит тебя!")
+        await update_fight_ui(query, fight, player)
+        return
+
+    # Неуязвимость
+    if fight.invulnerable > 0:
+        fight.invulnerable -= 1
+        fight.fight_log.append("✨ Ты неуязвим!")
+        await update_fight_ui(query, fight, player)
+        return
+
+    # Атака врага
+    enemy_damage = fight.enemy_damage
+
+    # Замедление
+    if "slow" in fight.enemy_effects:
+        enemy_damage = int(enemy_damage * 0.7)
+
+    # Блок
+    if fight.block_next:
+        enemy_damage = int(enemy_damage * 0.3)
+        fight.block_next = False
+        fight.fight_log.append(f"🛡️ Блок! Получено {enemy_damage} урона")
+    # Уклонение
+    elif fight.dodge_next:
+        enemy_damage = 0
+        fight.dodge_next = False
+        fight.fight_log.append("💨 Уклонился!")
+    else:
+        # Барьер
+        if fight.barrier > 0:
+            if fight.barrier >= enemy_damage:
+                fight.barrier -= enemy_damage
+                enemy_damage = 0
+                fight.fight_log.append(f"🔮 Барьер поглотил удар")
+            else:
+                enemy_damage -= fight.barrier
+                fight.barrier = 0
+                fight.fight_log.append(f"🔮 Барьер разрушен!")
+
+        # Защита
+        defense = player.get_total_defense() + fight.food_bonus_defense + fight.merc_bonus_defense
+        enemy_damage = max(1, enemy_damage - defense)
+        fight.fight_log.append(f"👊 Враг атакует -{enemy_damage} HP")
+
+    # Нанести урон игроку
+    fight.player_hp -= enemy_damage
+
+    # Эффекты от способностей врага
+    if hasattr(fight, 'enemy_special'):
+        if "poison" in fight.enemy_special and random.randint(1, 100) <= 30:
+            fight.player_effects["poison"] = fight.enemy_special["poison"]
+            fight.fight_log.append("🤢 Ты отравлен!")
+        if "burn" in fight.enemy_special and random.randint(1, 100) <= 30:
+            fight.player_effects["burn"] = fight.enemy_special["burn"]
+            fight.fight_log.append("🔥 Ты горишь!")
+        if "lifesteal" in fight.enemy_special:
+            heal = int(enemy_damage * fight.enemy_special["lifesteal"])
+            fight.enemy_hp = min(fight.enemy_hp + heal, fight.enemy_max_hp)
+            fight.fight_log.append(f"🩸 Враг восстановил {heal} HP")
+
+    # Эффекты на игроке
+    if "poison" in fight.player_effects:
+        poison_dmg = fight.player_effects["poison"] * 3
+        fight.player_hp -= poison_dmg
+        fight.player_effects["poison"] -= 1
+        if fight.player_effects["poison"] <= 0:
+            del fight.player_effects["poison"]
+        fight.fight_log.append(f"🤢 Яд -{poison_dmg} HP")
+
+    if "burn" in fight.player_effects:
+        burn_dmg = fight.player_effects["burn"] * 3
+        fight.player_hp -= burn_dmg
+        fight.player_effects["burn"] -= 1
+        if fight.player_effects["burn"] <= 0:
+            del fight.player_effects["burn"]
+        fight.fight_log.append(f"🔥 Горение -{burn_dmg} HP")
+
+    # Проверить смерть игрока
+    if fight.player_hp <= 0:
+        # Бонус паладина - воскрешение
+        if player.player_class == "paladin" and player.count_legendary_pieces() >= 4:
+            if not hasattr(fight, 'resurrected') or not fight.resurrected:
+                fight.resurrected = True
+                fight.player_hp = int(fight.player_max_hp * 0.3)
+                fight.fight_log.append("✨ Воскрешение! 30% HP")
+                await update_fight_ui(query, fight, player)
+                return
+
+        await end_fight(query, fight, player, victory=False)
+        return
+
+    await update_fight_ui(query, fight, player)
+
+
+async def end_fight(query, fight, player, victory: bool):
+    """Завершить бой"""
+    fight.fight_active = False
+
+    if victory:
+        # Награды
+        exp_gained = fight.exp_reward
+        gold_gained = fight.gold_reward
+
+        player.exp += exp_gained
+        player.gold += gold_gained
+        player.stats["gold_earned"] = player.stats.get("gold_earned", 0) + gold_gained
+        player.stats["kills"] = player.stats.get("kills", 0) + 1
+
+        if fight.is_boss:
+            player.stats["boss_kills"] = player.stats.get("boss_kills", 0) + 1
+
+        # Дроп ресурса
+        dungeon = DUNGEONS[fight.dungeon_id]
+        resource = dungeon.get("drop_resource")
+        resource_amount = random.randint(1, 3)
+        if resource:
+            player.inventory[resource] = player.inventory.get(resource, 0) + resource_amount
+
+        # Проверить повышение уровня
+        level_up_text = ""
+        while player.exp >= player.exp_to_level:
+            player.exp -= player.exp_to_level
+            player.level += 1
+            player.exp_to_level = int(player.exp_to_level * 1.2)
+
+            # Восстановить HP и ману при левел-апе
+            player.hp = player.get_max_hp()
+            player.mana = player.get_max_mana()
+
+            level_up_text = f"\n\n🎉 **УРОВЕНЬ {player.level}!**"
+
+        # Обновить HP игрока
+        player.hp = fight.player_hp
+        player.mana = fight.player_mana
+
+        # Уменьшить счётчик наёмника
+        if player.mercenary:
+            player.mercenary["fights"] = player.mercenary.get("fights", 0) - 1
+            if player.mercenary["fights"] <= 0:
+                player.mercenary = None
+
+        player.stats["floors"] = player.stats.get("floors", 0) + 1
+
+        text = f"""🎉 **ПОБЕДА!**
+
+{fight.enemy_emoji} {fight.enemy_name} повержен!
+
+💰 Золото: +{gold_gained}
+⭐ Опыт: +{exp_gained}
+📦 {resource}: +{resource_amount}{level_up_text}"""
+
+        # Кнопки
+        if fight.is_boss:
+            # Босс побеждён - подземелье пройдено
+            player.current_dungeon = None
+            player.current_floor = 0
+
+            text += "\n\n👑 **Подземелье пройдено!**"
+            keyboard = [[InlineKeyboardButton("🏠 В меню", callback_data="menu")]]
+        else:
+            # Продолжить или выйти
+            keyboard = [
+                [InlineKeyboardButton("➡️ Дальше", callback_data="next_floor")],
+                [InlineKeyboardButton("🏠 Выйти", callback_data="menu")]
+            ]
+
+    else:
+        # Поражение
+        player.stats["deaths"] = player.stats.get("deaths", 0) + 1
+        player.hp = int(player.get_max_hp() * 0.3)
+        player.mana = int(player.get_max_mana() * 0.5)
+        player.current_dungeon = None
+        player.current_floor = 0
+
+        text = f"""💀 **ПОРАЖЕНИЕ**
+
+{fight.enemy_emoji} {fight.enemy_name} победил тебя...
+
+Ты очнулся в таверне с 30% здоровья."""
+
+        keyboard = [[InlineKeyboardButton("🏠 В меню", callback_data="menu")]]
+
+    remove_active_fight(query.from_user.id)
+    save_data()
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )

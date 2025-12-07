@@ -65,7 +65,7 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "🎒 **ИНВЕНТАРЬ**\n\n"
+    text = "🎒 ИНВЕНТАРЬ\n\n"
 
     # Группировать по типам
     resources = []
@@ -90,14 +90,14 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
             equipment.append(f"{rarity_emoji}{emoji} {name}: {count}")
 
     if resources:
-        text += "**🌿 Ресурсы:**\n" + "\n".join(resources) + "\n\n"
+        text += "🌿 Ресурсы:\n" + "\n".join(resources) + "\n\n"
     if consumables:
-        text += "**🧪 Расходники:**\n" + "\n".join(consumables) + "\n\n"
+        text += "🧪 Расходники:\n" + "\n".join(consumables) + "\n\n"
     if equipment:
-        text += "**⚔️ Снаряжение:**\n" + "\n".join(equipment) + "\n\n"
+        text += "⚔️ Снаряжение:\n" + "\n".join(equipment) + "\n\n"
 
     if not resources and not consumables and not equipment:
-        text += "_Инвентарь пуст_"
+        text += "Инвентарь пуст"
 
     keyboard = [
         [
@@ -108,7 +108,7 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -119,7 +119,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "⚔️ **СНАРЯЖЕНИЕ**\n\n"
+    text = "⚔️ СНАРЯЖЕНИЕ\n\n"
 
     # Показать все слоты
     slot_emojis = {
@@ -140,7 +140,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             name = item.get("name", item_id)
             text += f"{emoji} {slot_name}: {rarity_emoji}{item_emoji} {name}\n"
         else:
-            text += f"{emoji} {slot_name}: _Пусто_\n"
+            text += f"{emoji} {slot_name}: Пусто\n"
 
     # Статы
     total_damage = player.get_total_damage()
@@ -151,7 +151,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_mana = player.get_max_mana()
 
     text += f"""
-📊 **Итоговые статы:**
+📊 Итоговые статы:
 ❤️ HP: {total_hp} | 💙 Мана: {total_mana}
 ⚔️ Урон: {total_damage} | 🛡️ Защита: {total_defense}
 🎯 Крит: {total_crit}% | 💨 Уклон: {total_dodge}%"""
@@ -161,7 +161,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for set_id, epic_set in EPIC_SETS.items():
         count = player.count_epic_pieces(set_id)
         if count > 0:
-            set_text += f"\n\n🟣 **{epic_set['name']}** ({count}/8)"
+            set_text += f"\n\n🟣 {epic_set['name']} ({count}/8)"
             if count >= 2:
                 set_text += f"\n  ✅ 2шт: {epic_set['bonus_2']}"
             if count >= 4:
@@ -195,7 +195,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -347,12 +347,12 @@ async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = f"""🛒 **МАГАЗИН**
+    text = f"""🛒 МАГАЗИН
 
 💰 Золото: {player.gold}
 
-_В магазине продаются только обычные предметы.
-Редкие можно скрафтить в кузнице._"""
+В магазине продаются только обычные предметы.
+Редкие можно скрафтить в кузнице."""
 
     keyboard = [
         [
@@ -380,7 +380,7 @@ _В магазине продаются только обычные предме
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -396,7 +396,7 @@ async def show_shop_category(update: Update, context: ContextTypes.DEFAULT_TYPE)
     is_consumable = category == "consumable"
 
     slot_name = "Зелья" if is_consumable else SLOT_NAMES.get(category, category)
-    text = f"🛒 **{slot_name}**\n\n💰 Золото: {player.gold}\n\n"
+    text = f"🛒 {slot_name}\n\n💰 Золото: {player.gold}\n\n"
 
     keyboard = []
 
@@ -422,7 +422,7 @@ async def show_shop_category(update: Update, context: ContextTypes.DEFAULT_TYPE)
         price = item["price"]
         stats = get_item_stats_text(item)
 
-        text += f"{emoji} **{name}** - {price}💰\n"
+        text += f"{emoji} {name} - {price}💰\n"
         if stats:
             text += f"  {stats}\n"
 
@@ -432,12 +432,12 @@ async def show_shop_category(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )])
 
     if not keyboard:
-        text += "_Нет товаров_"
+        text += "Нет товаров"
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="shop")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -484,7 +484,7 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "sell_menu":
         await query.answer()
 
-        text = f"💰 **ПРОДАЖА**\n\n💰 Золото: {player.gold}\n\n"
+        text = f"💰 ПРОДАЖА\n\n💰 Золото: {player.gold}\n\n"
 
         keyboard = []
 
@@ -514,12 +514,12 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
 
         if not keyboard:
-            text += "_Нечего продавать_"
+            text += "Нечего продавать"
 
         keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="inventory")])
 
         await query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+            text, reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
 

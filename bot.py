@@ -30,7 +30,8 @@ from handlers.tavern import (
 )
 from handlers.inventory import (
     show_inventory, show_equipment, show_slot_items, equip_item, unequip_item,
-    show_shop, show_shop_category, buy_item, sell_item
+    show_shop, show_shop_category, buy_item, sell_item,
+    show_potion_slots, show_potion_choice, select_potion_for_slot
 )
 from handlers.misc import (
     show_achievements, show_daily, claim_daily,
@@ -114,6 +115,11 @@ def main():
     app.add_handler(CallbackQueryHandler(show_slot_items, pattern="^slot_"))
     app.add_handler(CallbackQueryHandler(equip_item, pattern="^equip_"))
     app.add_handler(CallbackQueryHandler(unequip_item, pattern="^unequip_"))
+
+    # Слоты зелий
+    app.add_handler(CallbackQueryHandler(show_potion_slots, pattern="^potion_slots$"))
+    app.add_handler(CallbackQueryHandler(show_potion_choice, pattern="^set_potion_"))
+    app.add_handler(CallbackQueryHandler(select_potion_for_slot, pattern="^select_potion_"))
 
     # Магазин
     app.add_handler(CallbackQueryHandler(show_shop, pattern="^shop$"))

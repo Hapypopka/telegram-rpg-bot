@@ -102,6 +102,9 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
             InlineKeyboardButton("⚔️ Снаряжение", callback_data="equipment"),
+            InlineKeyboardButton("⚗️ Зелья", callback_data="potion_slots")
+        ],
+        [
             InlineKeyboardButton("💰 Продать", callback_data="sell_menu")
         ],
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
@@ -616,3 +619,195 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Обновить меню продажи
         await show_sell_menu(query, player)
+
+
+# =====================
+# НАСТРОЙКА ЗЕЛИЙ ДЛЯ БОЯ
+# =====================
+
+# Список всех зелий которые можно использовать в бою
+BATTLE_POTIONS = {
+    "hp_potion_small": {"name": "Малое зелье HP", "emoji": "❤️", "effect": "heal", "value": 50},
+    "hp_potion_medium": {"name": "Среднее зелье HP", "emoji": "💖", "effect": "heal", "value": 120},
+    "hp_potion_large": {"name": "Большое зелье HP", "emoji": "💗", "effect": "heal", "value": 250},
+    "mana_potion_small": {"name": "Малое зелье маны", "emoji": "💙", "effect": "mana", "value": 30},
+    "mana_potion_medium": {"name": "Среднее зелье маны", "emoji": "💎", "effect": "mana", "value": 70},
+    "elixir_power": {"name": "Эликсир силы", "emoji": "💪", "effect": "buff_damage", "value": 0.2},
+    "elixir_defense": {"name": "Эликсир защиты", "emoji": "🛡️", "effect": "buff_defense", "value": 0.2},
+    "antidote": {"name": "Противоядие", "emoji": "🧪", "effect": "cleanse", "value": 0},
+}
+
+
+async def show_potion_slots(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать меню настройки слотов зелий"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    # Получить текущие зелья в слотах
+    slot1_id = player.potion_slots.get("slot_1")
+    slot2_id = player.potion_slots.get("slot_2")
+
+    slot1_item = ITEMS.get(slot1_id, {})
+    slot2_item = ITEMS.get(slot2_id, {})
+
+    slot1_name = slot1_item.get("name", "Пусто") if slot1_id else "Пусто"
+    slot2_name = slot2_item.get("name", "Пусто") if slot2_id else "Пусто"
+    slot1_emoji = slot1_item.get("emoji", "❓") if slot1_id else "❓"
+    slot2_emoji = slot2_item.get("emoji", "❓") if slot2_id else "❓"
+
+    # Подсчитать зелья в инвентаре
+    slot1_count = player.inventory.get(slot1_id, 0) if slot1_id else 0
+    slot2_count = player.inventory.get(slot2_id, 0) if slot2_id else 0
+
+    text = f"""⚗️ СЛОТЫ ЗЕЛИЙ
+
+Выбери какие зелья использовать в бою.
+В бою будут доступны 2 кнопки с выбранными зельями.
+
+📌 Слот 1: {slot1_emoji} {slot1_name}
+   В инвентаре: {slot1_count} шт.
+
+📌 Слот 2: {slot2_emoji} {slot2_name}
+   В инвентаре: {slot2_count} шт.
+
+Нажми на слот чтобы изменить зелье."""
+
+    keyboard = [
+        [InlineKeyboardButton(f"📌 Слот 1: {slot1_emoji} {slot1_name}", callback_data="set_potion_1")],
+        [InlineKeyboardButton(f"📌 Слот 2: {slot2_emoji} {slot2_name}", callback_data="set_potion_2")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="inventory")]
+    ]
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def show_potion_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать выбор зелья для слота"""
+    query = update.callback_query
+    await query.answer()
+
+    slot_num = query.data.replace("set_potion_", "")
+    player = get_player(query.from_user.id)
+
+    text = f"⚗️ ВЫБОР ЗЕЛЬЯ ДЛЯ СЛОТА {slot_num}\n\n"
+    text += "Доступные зелья:\n\n"
+
+    keyboard = []
+
+    for potion_id, potion_info in BATTLE_POTIONS.items():
+        count = player.inventory.get(potion_id, 0)
+        emoji = potion_info["emoji"]
+        name = potion_info["name"]
+
+        # Описание эффекта
+        effect = potion_info["effect"]
+        if effect == "heal":
+            effect_text = f"+{potion_info['value']} HP"
+        elif effect == "mana":
+            effect_text = f"+{potion_info['value']} маны"
+        elif effect == "buff_damage":
+            effect_text = f"+{int(potion_info['value']*100)}% урона (1 бой)"
+        elif effect == "buff_defense":
+            effect_text = f"+{int(potion_info['value']*100)}% защиты (1 бой)"
+        elif effect == "cleanse":
+            effect_text = "Снимает яд"
+        else:
+            effect_text = ""
+
+        text += f"{emoji} {name} ({count} шт.)\n"
+        text += f"   {effect_text}\n\n"
+
+        # Кнопка выбора
+        btn_text = f"{emoji} {name} ({count})"
+        keyboard.append([InlineKeyboardButton(
+            btn_text,
+            callback_data=f"select_potion_{slot_num}_{potion_id}"
+        )])
+
+    # Кнопка очистить слот
+    keyboard.append([InlineKeyboardButton("❌ Очистить слот", callback_data=f"select_potion_{slot_num}_none")])
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="potion_slots")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def select_potion_for_slot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Выбрать зелье для слота"""
+    query = update.callback_query
+
+    # Формат: select_potion_SLOT_POTIONID
+    parts = query.data.split("_", 3)
+    if len(parts) < 4:
+        await query.answer()
+        return
+
+    slot_num = parts[2]
+    potion_id = parts[3]
+
+    player = get_player(query.from_user.id)
+
+    slot_key = f"slot_{slot_num}"
+
+    if potion_id == "none":
+        player.potion_slots[slot_key] = None
+        await query.answer("Слот очищен")
+    else:
+        # Проверить что это валидное зелье
+        if potion_id not in BATTLE_POTIONS:
+            await query.answer("Неизвестное зелье!", show_alert=True)
+            return
+
+        player.potion_slots[slot_key] = potion_id
+        potion_name = BATTLE_POTIONS[potion_id]["name"]
+        await query.answer(f"Слот {slot_num}: {potion_name}")
+
+    save_data()
+
+    # Вернуться к меню слотов
+    await show_potion_slots_direct(query, player)
+
+
+async def show_potion_slots_direct(query, player):
+    """Показать меню слотов зелий (прямой вызов)"""
+    slot1_id = player.potion_slots.get("slot_1")
+    slot2_id = player.potion_slots.get("slot_2")
+
+    slot1_item = ITEMS.get(slot1_id, {})
+    slot2_item = ITEMS.get(slot2_id, {})
+
+    slot1_name = slot1_item.get("name", "Пусто") if slot1_id else "Пусто"
+    slot2_name = slot2_item.get("name", "Пусто") if slot2_id else "Пусто"
+    slot1_emoji = slot1_item.get("emoji", "❓") if slot1_id else "❓"
+    slot2_emoji = slot2_item.get("emoji", "❓") if slot2_id else "❓"
+
+    slot1_count = player.inventory.get(slot1_id, 0) if slot1_id else 0
+    slot2_count = player.inventory.get(slot2_id, 0) if slot2_id else 0
+
+    text = f"""⚗️ СЛОТЫ ЗЕЛИЙ
+
+Выбери какие зелья использовать в бою.
+В бою будут доступны 2 кнопки с выбранными зельями.
+
+📌 Слот 1: {slot1_emoji} {slot1_name}
+   В инвентаре: {slot1_count} шт.
+
+📌 Слот 2: {slot2_emoji} {slot2_name}
+   В инвентаре: {slot2_count} шт.
+
+Нажми на слот чтобы изменить зелье."""
+
+    keyboard = [
+        [InlineKeyboardButton(f"📌 Слот 1: {slot1_emoji} {slot1_name}", callback_data="set_potion_1")],
+        [InlineKeyboardButton(f"📌 Слот 2: {slot2_emoji} {slot2_name}", callback_data="set_potion_2")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="inventory")]
+    ]
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )

@@ -57,12 +57,30 @@ def get_fight_keyboard(fight, player) -> InlineKeyboardMarkup:
         if skill_row:
             buttons.append(skill_row)
 
-    # Зелья
-    row3 = [
-        InlineKeyboardButton("❤️ HP зелье", callback_data="fight_potion_hp"),
-        InlineKeyboardButton("💙 Мана зелье", callback_data="fight_potion_mana"),
-    ]
-    buttons.append(row3)
+    # Зелья из слотов игрока
+    from data import ITEMS
+    row3 = []
+
+    slot1_id = player.potion_slots.get("slot_1") if hasattr(player, 'potion_slots') else "hp_potion_small"
+    slot2_id = player.potion_slots.get("slot_2") if hasattr(player, 'potion_slots') else "mana_potion_small"
+
+    if slot1_id:
+        slot1_item = ITEMS.get(slot1_id, {})
+        slot1_emoji = slot1_item.get("emoji", "❓")
+        slot1_name = slot1_item.get("name", "Зелье 1")
+        # Короткое имя для кнопки
+        short_name1 = slot1_name.replace("Малое ", "").replace("Среднее ", "").replace("Большое ", "")
+        row3.append(InlineKeyboardButton(f"{slot1_emoji} {short_name1}", callback_data="fight_potion_1"))
+
+    if slot2_id:
+        slot2_item = ITEMS.get(slot2_id, {})
+        slot2_emoji = slot2_item.get("emoji", "❓")
+        slot2_name = slot2_item.get("name", "Зелье 2")
+        short_name2 = slot2_name.replace("Малое ", "").replace("Среднее ", "").replace("Большое ", "")
+        row3.append(InlineKeyboardButton(f"{slot2_emoji} {short_name2}", callback_data="fight_potion_2"))
+
+    if row3:
+        buttons.append(row3)
 
     # Побег
     buttons.append([InlineKeyboardButton("🏃 Сбежать", callback_data="fight_flee")])

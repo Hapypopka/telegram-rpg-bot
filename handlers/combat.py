@@ -67,6 +67,10 @@ async def fight_attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Бонусы от еды и наёмника
     base_damage += fight.food_bonus_damage + fight.merc_bonus_damage
 
+    # Бонус от эликсира силы
+    if hasattr(fight, 'potion_buff_damage') and fight.potion_buff_damage > 0:
+        base_damage = int(base_damage * (1 + fight.potion_buff_damage))
+
     # Крит
     crit_chance = player.get_crit_chance() + fight.food_bonus_crit + fight.merc_bonus_crit
     is_crit = random.randint(1, 100) <= crit_chance
@@ -275,44 +279,88 @@ async def fight_skill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def fight_potion(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Использовать зелье"""
+    """Использовать зелье из слота"""
     query = update.callback_query
 
-    potion_type = query.data.replace("fight_potion_", "")
+    slot_num = query.data.replace("fight_potion_", "")
     player = get_player(query.from_user.id)
     fight = get_active_fight(query.from_user.id)
 
     if not fight or not fight.fight_active:
         return
 
-    if potion_type == "hp":
-        # Найти лучшее зелье HP
-        potions = ["hp_potion_large", "hp_potion_medium", "hp_potion_small"]
-        for pot in potions:
-            if player.inventory.get(pot, 0) > 0:
-                player.inventory[pot] -= 1
-                heal = ITEMS[pot].get("heal", 50)
-                fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
-                fight.fight_log.append(f"❤️ Зелье HP +{heal}")
-                await query.answer(f"+{heal} HP!")
-                break
-        else:
-            await query.answer("Нет зелий HP!", show_alert=True)
-            return
+    # Получить ID зелья из слота
+    slot_key = f"slot_{slot_num}"
+    potion_id = player.potion_slots.get(slot_key) if hasattr(player, 'potion_slots') else None
 
-    elif potion_type == "mana":
-        potions = ["mana_potion_medium", "mana_potion_small"]
-        for pot in potions:
-            if player.inventory.get(pot, 0) > 0:
-                player.inventory[pot] -= 1
-                mana = ITEMS[pot].get("mana", 30)
-                fight.player_mana = min(fight.player_mana + mana, player.get_max_mana())
-                fight.fight_log.append(f"💙 Зелье маны +{mana}")
-                await query.answer(f"+{mana} маны!")
-                break
+    # Fallback для старой системы
+    if not potion_id:
+        if slot_num == "1" or slot_num == "hp":
+            potion_id = "hp_potion_small"
+        elif slot_num == "2" or slot_num == "mana":
+            potion_id = "mana_potion_small"
+
+    if not potion_id:
+        await query.answer("Слот пуст!", show_alert=True)
+        return
+
+    # Проверить наличие зелья
+    if player.inventory.get(potion_id, 0) <= 0:
+        item_name = ITEMS.get(potion_id, {}).get("name", "Зелье")
+        await query.answer(f"Нет {item_name}!", show_alert=True)
+        return
+
+    # Использовать зелье
+    item = ITEMS.get(potion_id, {})
+    item_name = item.get("name", "Зелье")
+    item_emoji = item.get("emoji", "🧪")
+
+    player.inventory[potion_id] -= 1
+
+    # Применить эффект зелья
+    if "heal" in item:
+        heal = item["heal"]
+        fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
+        fight.fight_log.append(f"{item_emoji} {item_name} +{heal} HP")
+        await query.answer(f"+{heal} HP!")
+
+    elif "mana" in item:
+        mana = item["mana"]
+        fight.player_mana = min(fight.player_mana + mana, player.get_max_mana())
+        fight.fight_log.append(f"{item_emoji} {item_name} +{mana} маны")
+        await query.answer(f"+{mana} маны!")
+
+    elif "buff_damage" in item:
+        # Бафф урона на весь бой
+        bonus = item["buff_damage"]
+        if not hasattr(fight, 'potion_buff_damage'):
+            fight.potion_buff_damage = 0
+        fight.potion_buff_damage += bonus
+        fight.fight_log.append(f"{item_emoji} Урон +{int(bonus*100)}%!")
+        await query.answer(f"Урон +{int(bonus*100)}%!")
+
+    elif "buff_defense" in item:
+        # Бафф защиты на весь бой
+        bonus = item["buff_defense"]
+        if not hasattr(fight, 'potion_buff_defense'):
+            fight.potion_buff_defense = 0
+        fight.potion_buff_defense += bonus
+        fight.fight_log.append(f"{item_emoji} Защита +{int(bonus*100)}%!")
+        await query.answer(f"Защита +{int(bonus*100)}%!")
+
+    elif "cleanse_poison" in item:
+        # Снять яд
+        if "poison" in fight.player_effects:
+            del fight.player_effects["poison"]
+            fight.fight_log.append(f"{item_emoji} Яд снят!")
+            await query.answer("Яд снят!")
         else:
-            await query.answer("Нет зелий маны!", show_alert=True)
-            return
+            fight.fight_log.append(f"{item_emoji} Нет яда для снятия")
+            await query.answer("Нет яда!")
+
+    else:
+        fight.fight_log.append(f"{item_emoji} Использовано {item_name}")
+        await query.answer(f"Использовано: {item_name}")
 
     save_data()
     await process_enemy_attack(query, fight, player)
@@ -442,6 +490,11 @@ async def process_enemy_attack(query, fight, player):
 
         # Защита
         defense = player.get_total_defense() + fight.food_bonus_defense + fight.merc_bonus_defense
+
+        # Бонус от эликсира защиты
+        if hasattr(fight, 'potion_buff_defense') and fight.potion_buff_defense > 0:
+            defense = int(defense * (1 + fight.potion_buff_defense))
+
         enemy_damage = max(1, enemy_damage - defense)
         fight.fight_log.append(f"👊 Враг атакует -{enemy_damage} HP")
 

@@ -80,6 +80,12 @@ class Player:
         # Наёмник
         self.mercenary = None
 
+        # Слоты для зелий в бою (2 слота)
+        self.potion_slots = {
+            "slot_1": "hp_potion_small",    # По умолчанию HP зелье
+            "slot_2": "mana_potion_small"   # По умолчанию Мана зелье
+        }
+
     def to_dict(self) -> dict:
         """Сериализация в словарь"""
         return {
@@ -106,7 +112,8 @@ class Player:
             "last_daily": self.last_daily,
             "daily_streak": self.daily_streak,
             "food_buffs": self.food_buffs,
-            "mercenary": self.mercenary
+            "mercenary": self.mercenary,
+            "potion_slots": self.potion_slots
         }
 
     @classmethod
@@ -173,6 +180,13 @@ class Player:
             for key, val in default_stats.items():
                 if key not in data["stats"]:
                     data["stats"][key] = val
+
+        # Миграция: добавить слоты зелий для старых игроков
+        if "potion_slots" not in data:
+            data["potion_slots"] = {
+                "slot_1": "hp_potion_small",
+                "slot_2": "mana_potion_small"
+            }
 
         for key, value in data.items():
             if hasattr(player, key):

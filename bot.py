@@ -100,17 +100,17 @@ def main():
     app.add_handler(CallbackQueryHandler(show_craft_category, pattern="^craft_cat_"))
     app.add_handler(CallbackQueryHandler(craft_rare_item, pattern="^craft_item_"))
     app.add_handler(CallbackQueryHandler(craft_legendary, pattern="^craft_legend_"))
+    # Сокеты (до общего smith_ паттерна!)
+    app.add_handler(CallbackQueryHandler(show_socket_menu, pattern="^smith_sockets$"))
+    app.add_handler(CallbackQueryHandler(show_socket_choice, pattern="^socket_slot_"))
+    app.add_handler(CallbackQueryHandler(insert_socket, pattern="^insert_socket_"))
+    app.add_handler(CallbackQueryHandler(remove_socket, pattern="^remove_socket_"))
+    # Общий обработчик улучшений (должен быть последним из smith_)
     app.add_handler(CallbackQueryHandler(blacksmith_upgrade, pattern="^smith_"))
 
     # Алхимик
     app.add_handler(CallbackQueryHandler(show_alchemist, pattern="^tavern_alchemy$"))
     app.add_handler(CallbackQueryHandler(craft_potion, pattern="^craft_potion_"))
-
-    # Сокеты
-    app.add_handler(CallbackQueryHandler(show_socket_menu, pattern="^smith_sockets$"))
-    app.add_handler(CallbackQueryHandler(show_socket_choice, pattern="^socket_slot_"))
-    app.add_handler(CallbackQueryHandler(insert_socket, pattern="^insert_socket_"))
-    app.add_handler(CallbackQueryHandler(remove_socket, pattern="^remove_socket_"))
 
     # Квесты
     app.add_handler(CallbackQueryHandler(show_quests, pattern="^quests$"))

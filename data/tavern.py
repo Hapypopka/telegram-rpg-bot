@@ -142,6 +142,252 @@ BLACKSMITH_UPGRADES = {
     }
 }
 
+# Рецепты крафта редких предметов в кузнице
+CRAFT_RECIPES = {
+    # Оружие
+    "steel_sword": {
+        "name": "Стальной меч",
+        "emoji": "🔪",
+        "cost": 200,
+        "ingredients": {"ore": 10, "leather": 5},
+        "result": "steel_sword",
+        "slot": "weapon"
+    },
+    "magic_staff": {
+        "name": "Магический посох",
+        "emoji": "🪄",
+        "cost": 250,
+        "ingredients": {"crystal": 5, "essence": 3},
+        "result": "magic_staff",
+        "slot": "weapon"
+    },
+    "hunter_bow": {
+        "name": "Охотничий лук",
+        "emoji": "🎯",
+        "cost": 230,
+        "ingredients": {"leather": 8, "herb": 5},
+        "result": "hunter_bow",
+        "slot": "weapon"
+    },
+    "flame_sword": {
+        "name": "Пламенный меч",
+        "emoji": "🔥",
+        "cost": 500,
+        "ingredients": {"ore": 15, "essence": 10, "demon_soul": 2},
+        "result": "flame_sword",
+        "slot": "weapon"
+    },
+    "frost_staff": {
+        "name": "Ледяной посох",
+        "emoji": "❄️",
+        "cost": 550,
+        "ingredients": {"crystal": 10, "essence": 8},
+        "result": "frost_staff",
+        "slot": "weapon"
+    },
+    "shadow_dagger": {
+        "name": "Теневой кинжал",
+        "emoji": "🌑",
+        "cost": 480,
+        "ingredients": {"ore": 8, "essence": 12},
+        "result": "shadow_dagger",
+        "slot": "weapon"
+    },
+
+    # Шлемы
+    "steel_helm": {
+        "name": "Стальной шлем",
+        "emoji": "🪖",
+        "cost": 150,
+        "ingredients": {"ore": 8, "leather": 3},
+        "result": "steel_helm",
+        "slot": "helmet"
+    },
+    "mage_hood": {
+        "name": "Капюшон мага",
+        "emoji": "🎭",
+        "cost": 140,
+        "ingredients": {"cloth": 10, "crystal": 3},
+        "result": "mage_hood",
+        "slot": "helmet"
+    },
+
+    # Плечи
+    "steel_pauldrons": {
+        "name": "Стальные наплечи",
+        "emoji": "⚙️",
+        "cost": 130,
+        "ingredients": {"ore": 6, "leather": 4},
+        "result": "steel_pauldrons",
+        "slot": "shoulders"
+    },
+
+    # Грудь
+    "plate_armor": {
+        "name": "Латный доспех",
+        "emoji": "🛡️",
+        "cost": 280,
+        "ingredients": {"ore": 15, "leather": 5},
+        "result": "plate_armor",
+        "slot": "chest"
+    },
+    "mage_robe": {
+        "name": "Мантия мага",
+        "emoji": "🧥",
+        "cost": 250,
+        "ingredients": {"cloth": 15, "crystal": 5},
+        "result": "mage_robe",
+        "slot": "chest"
+    },
+
+    # Пояс
+    "steel_belt": {
+        "name": "Стальной пояс",
+        "emoji": "🔗",
+        "cost": 120,
+        "ingredients": {"ore": 5, "leather": 3},
+        "result": "steel_belt",
+        "slot": "belt"
+    },
+
+    # Перчатки
+    "steel_gauntlets": {
+        "name": "Стальные перчатки",
+        "emoji": "🤜",
+        "cost": 150,
+        "ingredients": {"ore": 6, "leather": 4},
+        "result": "steel_gauntlets",
+        "slot": "gloves"
+    },
+    "mage_gloves": {
+        "name": "Перчатки чародея",
+        "emoji": "🪬",
+        "cost": 140,
+        "ingredients": {"cloth": 8, "crystal": 3},
+        "result": "mage_gloves",
+        "slot": "gloves"
+    },
+
+    # Поножи
+    "plate_legs": {
+        "name": "Латные поножи",
+        "emoji": "🦿",
+        "cost": 200,
+        "ingredients": {"ore": 10, "leather": 4},
+        "result": "plate_legs",
+        "slot": "leggings"
+    },
+
+    # Сапоги
+    "steel_boots": {
+        "name": "Стальные сапоги",
+        "emoji": "🦶",
+        "cost": 170,
+        "ingredients": {"ore": 7, "leather": 5},
+        "result": "steel_boots",
+        "slot": "boots"
+    },
+    "swift_boots": {
+        "name": "Быстрые сапоги",
+        "emoji": "💨",
+        "cost": 190,
+        "ingredients": {"leather": 10, "herb": 5},
+        "result": "swift_boots",
+        "slot": "boots"
+    },
+
+    # Кольца
+    "lucky_ring": {
+        "name": "Кольцо удачи",
+        "emoji": "🍀",
+        "cost": 250,
+        "ingredients": {"crystal": 5, "essence": 3},
+        "result": "lucky_ring",
+        "slot": "ring"
+    },
+    "vampire_ring": {
+        "name": "Кольцо вампира",
+        "emoji": "🩸",
+        "cost": 400,
+        "ingredients": {"essence": 10, "demon_soul": 2},
+        "result": "vampire_ring",
+        "slot": "ring"
+    },
+    "berserker_ring": {
+        "name": "Кольцо берсерка",
+        "emoji": "🔥",
+        "cost": 350,
+        "ingredients": {"ore": 8, "demon_soul": 3},
+        "result": "berserker_ring",
+        "slot": "ring"
+    },
+
+    # Ожерелья
+    "power_amulet": {
+        "name": "Амулет силы",
+        "emoji": "📿",
+        "cost": 280,
+        "ingredients": {"crystal": 5, "ore": 5},
+        "result": "power_amulet",
+        "slot": "necklace"
+    },
+    "life_pendant": {
+        "name": "Кулон жизни",
+        "emoji": "💚",
+        "cost": 320,
+        "ingredients": {"herb": 15, "crystal": 3},
+        "result": "life_pendant",
+        "slot": "necklace"
+    },
+    "mana_crystal_necklace": {
+        "name": "Ожерелье маны",
+        "emoji": "💎",
+        "cost": 300,
+        "ingredients": {"crystal": 8, "essence": 5},
+        "result": "mana_crystal_necklace",
+        "slot": "necklace"
+    },
+    "shadow_medallion": {
+        "name": "Медальон теней",
+        "emoji": "🌑",
+        "cost": 450,
+        "ingredients": {"essence": 12, "demon_soul": 3},
+        "result": "shadow_medallion",
+        "slot": "necklace"
+    },
+}
+
+# Рецепты легендарного оружия (требуют рецепт-чертёж)
+LEGENDARY_CRAFT_RECIPES = {
+    "excalibur": {
+        "name": "Экскалибур",
+        "emoji": "⚔️",
+        "cost": 10000,
+        "requires_recipe": "excalibur_recipe",
+        "ingredients": {"dragon_scale": 10, "chaos_essence": 20, "demon_soul": 15},
+        "result": "excalibur",
+        "class": "warrior"
+    },
+    "staff_of_eternity": {
+        "name": "Посох Вечности",
+        "emoji": "🌟",
+        "cost": 10000,
+        "requires_recipe": "staff_of_eternity_recipe",
+        "ingredients": {"dragon_scale": 8, "chaos_essence": 25, "crystal": 20},
+        "result": "staff_of_eternity",
+        "class": "mage"
+    },
+    "bow_of_the_wind": {
+        "name": "Лук Ветра",
+        "emoji": "🌪️",
+        "cost": 10000,
+        "requires_recipe": "bow_of_the_wind_recipe",
+        "ingredients": {"dragon_scale": 8, "chaos_essence": 15, "essence": 30},
+        "result": "bow_of_the_wind",
+        "class": "archer"
+    }
+}
+
 ALCHEMY_RECIPES = {
     "hp_potion_medium": {
         "name": "Среднее зелье HP",

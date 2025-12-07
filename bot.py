@@ -22,13 +22,15 @@ from handlers.dungeon import (
 from handlers.tavern import (
     show_tavern, show_food_menu, buy_food,
     show_mercenaries, hire_mercenary,
-    show_blacksmith, blacksmith_upgrade,
+    show_blacksmith, show_smith_upgrades, show_craft_menu,
+    show_craft_category, craft_rare_item, blacksmith_upgrade,
+    show_legendary_craft, craft_legendary,
     show_alchemist, craft_potion,
     show_quests, claim_quest_reward
 )
 from handlers.inventory import (
-    show_inventory, show_equipment, equip_item, unequip_item,
-    show_shop, buy_item, sell_item
+    show_inventory, show_equipment, show_slot_items, equip_item, unequip_item,
+    show_shop, show_shop_category, buy_item, sell_item
 )
 from handlers.misc import (
     show_achievements, show_daily, claim_daily,
@@ -87,10 +89,20 @@ def main():
     app.add_handler(CallbackQueryHandler(buy_food, pattern="^buy_food_"))
     app.add_handler(CallbackQueryHandler(show_mercenaries, pattern="^tavern_mercs$"))
     app.add_handler(CallbackQueryHandler(hire_mercenary, pattern="^hire_merc_"))
+
+    # Кузнец
     app.add_handler(CallbackQueryHandler(show_blacksmith, pattern="^tavern_smith$"))
+    app.add_handler(CallbackQueryHandler(show_smith_upgrades, pattern="^smith_upgrades$"))
+    app.add_handler(CallbackQueryHandler(show_craft_menu, pattern="^smith_craft$"))
+    app.add_handler(CallbackQueryHandler(show_legendary_craft, pattern="^smith_legendary$"))
+    app.add_handler(CallbackQueryHandler(show_craft_category, pattern="^craft_cat_"))
+    app.add_handler(CallbackQueryHandler(craft_rare_item, pattern="^craft_item_"))
+    app.add_handler(CallbackQueryHandler(craft_legendary, pattern="^craft_legend_"))
     app.add_handler(CallbackQueryHandler(blacksmith_upgrade, pattern="^smith_"))
+
+    # Алхимик
     app.add_handler(CallbackQueryHandler(show_alchemist, pattern="^tavern_alchemy$"))
-    app.add_handler(CallbackQueryHandler(craft_potion, pattern="^craft_"))
+    app.add_handler(CallbackQueryHandler(craft_potion, pattern="^craft_potion_"))
 
     # Квесты
     app.add_handler(CallbackQueryHandler(show_quests, pattern="^quests$"))
@@ -99,12 +111,13 @@ def main():
     # Инвентарь
     app.add_handler(CallbackQueryHandler(show_inventory, pattern="^inventory$"))
     app.add_handler(CallbackQueryHandler(show_equipment, pattern="^equipment$"))
+    app.add_handler(CallbackQueryHandler(show_slot_items, pattern="^slot_"))
     app.add_handler(CallbackQueryHandler(equip_item, pattern="^equip_"))
     app.add_handler(CallbackQueryHandler(unequip_item, pattern="^unequip_"))
 
     # Магазин
     app.add_handler(CallbackQueryHandler(show_shop, pattern="^shop$"))
-    app.add_handler(CallbackQueryHandler(buy_item, pattern="^shop_"))
+    app.add_handler(CallbackQueryHandler(show_shop_category, pattern="^shop_"))
     app.add_handler(CallbackQueryHandler(buy_item, pattern="^buy_"))
     app.add_handler(CallbackQueryHandler(sell_item, pattern="^sell_"))
 

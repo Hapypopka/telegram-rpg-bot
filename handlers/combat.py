@@ -7,8 +7,44 @@ import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from data import CLASSES, DUNGEONS, ITEMS
+from data import CLASSES, DUNGEONS, ITEMS, RARITY_EMOJI, EPIC_SETS
 from utils.storage import get_player, save_data
+
+# Редкие предметы, которые могут выпасть с мобов (по подземельям)
+RARE_DROPS = {
+    "forest": [
+        "steel_sword", "steel_helm", "leather_gloves", "steel_boots",
+        "lucky_ring", "life_pendant"
+    ],
+    "mines": [
+        "steel_sword", "magic_staff", "steel_helm", "mage_hood",
+        "plate_armor", "steel_gauntlets", "power_amulet"
+    ],
+    "crypt": [
+        "shadow_dagger", "frost_staff", "steel_pauldrons", "mage_robe",
+        "plate_legs", "vampire_ring", "shadow_medallion"
+    ],
+    "abyss": [
+        "flame_sword", "frost_staff", "shadow_dagger",
+        "steel_gauntlets", "mage_gloves", "swift_boots",
+        "berserker_ring", "mana_crystal_necklace"
+    ],
+    "chaos": [
+        "flame_sword", "frost_staff", "shadow_dagger",
+        "vampire_ring", "berserker_ring", "shadow_medallion"
+    ]
+}
+
+# Эпические предметы с боссов (по подземельям)
+# Босс гарантированно дропает 1 эпик из своего сета
+EPIC_BOSS_DROPS = {
+    "forest": ["titans_blade", "titan_helm", "titan_shoulders", "titan_plate",
+               "titan_gauntlets", "titan_boots", "titan_ring", "titan_amulet"],
+    "mines": ["archmage_staff", "archmage_crown", "archmage_mantle", "archmage_robe",
+              "archmage_gloves", "archmage_boots", "archmage_ring", "archmage_pendant"],
+    "crypt": ["phantom_bow", "phantom_mask", "phantom_cape", "phantom_cloak",
+              "phantom_gloves", "phantom_boots", "phantom_ring", "phantom_necklace"]
+}
 from utils.helpers import update_fight_ui, create_hp_bar
 from .dungeon import get_active_fight, remove_active_fight, active_fights
 
@@ -474,6 +510,34 @@ async def end_fight(query, fight, player, victory: bool):
         if resource:
             player.inventory[resource] = player.inventory.get(resource, 0) + resource_amount
 
+        # Шанс дропа редкого предмета (5% обычный моб, 15% босс)
+        rare_drop = None
+        drop_chance = 15 if fight.is_boss else 5
+        if random.randint(1, 100) <= drop_chance:
+            dungeon_id = fight.dungeon_id
+            if dungeon_id in RARE_DROPS and RARE_DROPS[dungeon_id]:
+                rare_drop = random.choice(RARE_DROPS[dungeon_id])
+                player.inventory[rare_drop] = player.inventory.get(rare_drop, 0) + 1
+
+        # Эпический дроп с босса (гарантированно 1 предмет сета)
+        epic_drop = None
+        dragon_scale_drop = 0
+        if fight.is_boss:
+            dungeon_id = fight.dungeon_id
+            if dungeon_id in EPIC_BOSS_DROPS and EPIC_BOSS_DROPS[dungeon_id]:
+                # Выбрать случайный эпик из сета босса
+                epic_drop = random.choice(EPIC_BOSS_DROPS[dungeon_id])
+                player.inventory[epic_drop] = player.inventory.get(epic_drop, 0) + 1
+
+            # Дроп чешуи дракона с боссов (для легендарок)
+            # Шанс зависит от подземелья
+            dragon_scale_chance = {
+                "forest": 5, "mines": 10, "crypt": 15, "abyss": 25, "chaos": 50
+            }
+            if random.randint(1, 100) <= dragon_scale_chance.get(dungeon_id, 0):
+                dragon_scale_drop = random.randint(1, 3)
+                player.inventory["dragon_scale"] = player.inventory.get("dragon_scale", 0) + dragon_scale_drop
+
         # Проверить повышение уровня
         level_up_text = ""
         while player.exp >= player.exp_to_level:
@@ -510,13 +574,35 @@ async def end_fight(query, fight, player, victory: bool):
             for ach in new_achievements:
                 achievement_text += f"{ach['emoji']} {ach['name']}\n"
 
+        # Текст о редком дропе
+        rare_drop_text = ""
+        if rare_drop:
+            item_data = ITEMS.get(rare_drop, {})
+            rare_emoji = RARITY_EMOJI.get(item_data.get("rarity", "common"), "")
+            rare_drop_text = f"\n{rare_emoji} **РЕДКИЙ ДРОП:** {item_data.get('name', rare_drop)}!"
+
+        # Текст о эпическом дропе с босса
+        epic_drop_text = ""
+        if epic_drop:
+            item_data = ITEMS.get(epic_drop, {})
+            set_id = item_data.get("set", "")
+            set_name = ""
+            if set_id and set_id in EPIC_SETS:
+                set_name = f" (сет: {EPIC_SETS[set_id]['name']})"
+            epic_drop_text = f"\n🟣 **ЭПИЧЕСКИЙ ДРОП:** {item_data.get('name', epic_drop)}!{set_name}"
+
+        # Текст о дропе чешуи дракона
+        dragon_text = ""
+        if fight.is_boss and dragon_scale_drop > 0:
+            dragon_text = f"\n🐉 Чешуя дракона: +{dragon_scale_drop}"
+
         text = f"""🎉 **ПОБЕДА!**
 
 {fight.enemy_emoji} {fight.enemy_name} повержен!
 
 💰 Золото: +{gold_gained}
 ⭐ Опыт: +{exp_gained}
-📦 {resource}: +{resource_amount}{level_up_text}{achievement_text}"""
+📦 {resource}: +{resource_amount}{dragon_text}{rare_drop_text}{epic_drop_text}{level_up_text}{achievement_text}"""
 
         # Кнопки
         if fight.is_boss:

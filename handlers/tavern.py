@@ -7,8 +7,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from data import (
-    TAVERN_FOOD, MERCENARIES, BLACKSMITH_UPGRADES,
-    ALCHEMY_RECIPES, QUESTS, ITEMS
+    TAVERN_FOOD, MERCENARIES, BLACKSMITH_UPGRADES, CRAFT_RECIPES,
+    ALCHEMY_RECIPES, QUESTS, ITEMS, SLOT_NAMES, LEGENDARY_CRAFT_RECIPES, RARITY_EMOJI
 )
 from utils.storage import get_player, save_data
 
@@ -200,13 +200,53 @@ async def hire_mercenary(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показать кузнеца"""
+    """Показать кузнеца - главное меню"""
     query = update.callback_query
     await query.answer()
 
     player = get_player(query.from_user.id)
 
-    text = f"⚒️ КУЗНЕЦ\n\n💰 Золото: {player.gold}\n\n"
+    # Проверить есть ли рецепты легендарок
+    has_legendary_recipe = any(
+        player.inventory.get(recipe["requires_recipe"], 0) > 0
+        for recipe in LEGENDARY_CRAFT_RECIPES.values()
+    )
+
+    text = f"""⚒️ **КУЗНЕЦ**
+
+💰 Золото: {player.gold}
+
+Кузнец может улучшить твоё снаряжение
+или выковать редкие предметы из ресурсов."""
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🔧 Улучшения", callback_data="smith_upgrades"),
+            InlineKeyboardButton("🔵 Крафт редких", callback_data="smith_craft")
+        ]
+    ]
+
+    # Показать крафт легендарок если есть рецепт
+    if has_legendary_recipe:
+        keyboard.append([
+            InlineKeyboardButton("🟠 Легендарный крафт", callback_data="smith_legendary")
+        ])
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def show_smith_upgrades(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать улучшения кузнеца"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    text = f"🔧 **УЛУЧШЕНИЯ**\n\n💰 Золото: {player.gold}\n\n"
 
     keyboard = []
 
@@ -214,9 +254,9 @@ async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_level = player.blacksmith_upgrades.get(upgrade_id, 0)
         resource_type, resource_amount = upgrade["resource"]
         player_resource = player.inventory.get(resource_type, 0)
-        resource_name = resource_type.replace('_', ' ')
+        resource_name = ITEMS.get(resource_type, {}).get("name", resource_type)
 
-        text += f"{upgrade['emoji']} {upgrade['name']} [{current_level}/{upgrade['max_level']}]\n"
+        text += f"{upgrade['emoji']} **{upgrade['name']}** [{current_level}/{upgrade['max_level']}]\n"
         text += f"  {upgrade['desc']}\n"
         text += f"  💰 {upgrade['cost']} + {resource_amount} {resource_name} ({player_resource})\n\n"
 
@@ -226,10 +266,284 @@ async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f"smith_{upgrade_id}"
             )])
 
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def show_craft_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать меню крафта редких предметов"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    text = f"""🔵 **КРАФТ РЕДКИХ**
+
+💰 Золото: {player.gold}
+
+Выбери категорию снаряжения:"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🗡️ Оружие", callback_data="craft_cat_weapon"),
+            InlineKeyboardButton("⛑️ Шлемы", callback_data="craft_cat_helmet")
+        ],
+        [
+            InlineKeyboardButton("🦺 Плечи", callback_data="craft_cat_shoulders"),
+            InlineKeyboardButton("🎽 Грудь", callback_data="craft_cat_chest")
+        ],
+        [
+            InlineKeyboardButton("🎗️ Пояса", callback_data="craft_cat_belt"),
+            InlineKeyboardButton("🧤 Перчатки", callback_data="craft_cat_gloves")
+        ],
+        [
+            InlineKeyboardButton("🦿 Поножи", callback_data="craft_cat_leggings"),
+            InlineKeyboardButton("👢 Сапоги", callback_data="craft_cat_boots")
+        ],
+        [
+            InlineKeyboardButton("💍 Кольца", callback_data="craft_cat_ring"),
+            InlineKeyboardButton("📿 Ожерелья", callback_data="craft_cat_necklace")
+        ],
+        [InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")]
+    ]
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def show_craft_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать рецепты крафта для категории"""
+    query = update.callback_query
+    await query.answer()
+
+    category = query.data.replace("craft_cat_", "")
+    player = get_player(query.from_user.id)
+
+    slot_name = SLOT_NAMES.get(category, category)
+    text = f"🔵 **Крафт: {slot_name}**\n\n💰 Золото: {player.gold}\n\n"
+
+    keyboard = []
+
+    for recipe_id, recipe in CRAFT_RECIPES.items():
+        if recipe.get("slot") != category:
+            continue
+
+        # Показать ингредиенты
+        ingredients_text = []
+        can_craft = True
+
+        for ing_id, amount in recipe["ingredients"].items():
+            player_amount = player.inventory.get(ing_id, 0)
+            ing_name = ITEMS.get(ing_id, {}).get("name", ing_id)
+            ing_emoji = ITEMS.get(ing_id, {}).get("emoji", "")
+
+            if player_amount >= amount:
+                ingredients_text.append(f"✅ {ing_emoji}{amount} {ing_name}")
+            else:
+                ingredients_text.append(f"❌ {ing_emoji}{amount} {ing_name} ({player_amount})")
+                can_craft = False
+
+        # Проверить золото
+        if player.gold < recipe["cost"]:
+            can_craft = False
+
+        text += f"{recipe['emoji']} **{recipe['name']}**\n"
+        text += f"  💰 {recipe['cost']} золота\n"
+        text += f"  {' | '.join(ingredients_text)}\n\n"
+
+        status = "✅" if can_craft else "❌"
+        keyboard.append([InlineKeyboardButton(
+            f"{status} {recipe['emoji']} {recipe['name']}",
+            callback_data=f"craft_item_{recipe_id}"
+        )])
+
+    if not keyboard:
+        text += "_Нет рецептов для этой категории_"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="smith_craft")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def craft_rare_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Скрафтить редкий предмет"""
+    query = update.callback_query
+
+    recipe_id = query.data.replace("craft_item_", "")
+    player = get_player(query.from_user.id)
+
+    if recipe_id not in CRAFT_RECIPES:
+        await query.answer("Рецепт не найден!", show_alert=True)
+        return
+
+    recipe = CRAFT_RECIPES[recipe_id]
+
+    # Проверить золото
+    if player.gold < recipe["cost"]:
+        await query.answer("Недостаточно золота!", show_alert=True)
+        return
+
+    # Проверить ингредиенты
+    for ing_id, amount in recipe["ingredients"].items():
+        if player.inventory.get(ing_id, 0) < amount:
+            ing_name = ITEMS.get(ing_id, {}).get("name", ing_id)
+            await query.answer(f"Недостаточно: {ing_name}!", show_alert=True)
+            return
+
+    # Списать ресурсы
+    player.gold -= recipe["cost"]
+    player.stats["gold_spent"] = player.stats.get("gold_spent", 0) + recipe["cost"]
+
+    for ing_id, amount in recipe["ingredients"].items():
+        player.inventory[ing_id] -= amount
+
+    # Выдать предмет
+    result_id = recipe["result"]
+    player.inventory[result_id] = player.inventory.get(result_id, 0) + 1
+
+    save_data()
+    await query.answer(f"Создано: {recipe['name']}!")
+
+    # Вернуться к категории
+    query.data = f"craft_cat_{recipe['slot']}"
+    await show_craft_category(update, context)
+
+
+async def show_legendary_craft(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать меню крафта легендарного оружия"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    text = f"""🟠 **ЛЕГЕНДАРНЫЙ КРАФТ**
+
+💰 Золото: {player.gold}
+
+Создай уникальное легендарное оружие!
+Требуется чертёж (из квестов) и редкие материалы.
+"""
+
+    keyboard = []
+
+    for recipe_id, recipe in LEGENDARY_CRAFT_RECIPES.items():
+        # Проверить есть ли рецепт
+        if player.inventory.get(recipe["requires_recipe"], 0) <= 0:
+            continue
+
+        # Проверить класс
+        if recipe.get("class") and recipe["class"] != player.player_class:
+            continue
+
+        # Показать ингредиенты
+        ingredients_text = []
+        can_craft = True
+
+        for ing_id, amount in recipe["ingredients"].items():
+            player_amount = player.inventory.get(ing_id, 0)
+            ing_name = ITEMS.get(ing_id, {}).get("name", ing_id)
+            ing_emoji = ITEMS.get(ing_id, {}).get("emoji", "")
+
+            if player_amount >= amount:
+                ingredients_text.append(f"✅ {ing_emoji}{amount} {ing_name}")
+            else:
+                ingredients_text.append(f"❌ {ing_emoji}{amount} {ing_name} ({player_amount})")
+                can_craft = False
+
+        if player.gold < recipe["cost"]:
+            can_craft = False
+
+        text += f"\n🟠 **{recipe['name']}** {recipe['emoji']}\n"
+        text += f"  💰 {recipe['cost']} золота\n"
+        text += f"  {' | '.join(ingredients_text)}\n"
+
+        status = "✅" if can_craft else "❌"
+        keyboard.append([InlineKeyboardButton(
+            f"{status} {recipe['emoji']} {recipe['name']}",
+            callback_data=f"craft_legend_{recipe_id}"
+        )])
+
+    if not keyboard:
+        text += "\n_Нет доступных рецептов для твоего класса._"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def craft_legendary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Скрафтить легендарное оружие"""
+    query = update.callback_query
+
+    recipe_id = query.data.replace("craft_legend_", "")
+    player = get_player(query.from_user.id)
+
+    if recipe_id not in LEGENDARY_CRAFT_RECIPES:
+        await query.answer("Рецепт не найден!", show_alert=True)
+        return
+
+    recipe = LEGENDARY_CRAFT_RECIPES[recipe_id]
+
+    # Проверить рецепт
+    if player.inventory.get(recipe["requires_recipe"], 0) <= 0:
+        await query.answer("У тебя нет чертежа!", show_alert=True)
+        return
+
+    # Проверить класс
+    if recipe.get("class") and recipe["class"] != player.player_class:
+        await query.answer("Это оружие не для твоего класса!", show_alert=True)
+        return
+
+    # Проверить золото
+    if player.gold < recipe["cost"]:
+        await query.answer("Недостаточно золота!", show_alert=True)
+        return
+
+    # Проверить ингредиенты
+    for ing_id, amount in recipe["ingredients"].items():
+        if player.inventory.get(ing_id, 0) < amount:
+            ing_name = ITEMS.get(ing_id, {}).get("name", ing_id)
+            await query.answer(f"Недостаточно: {ing_name}!", show_alert=True)
+            return
+
+    # Списать ресурсы
+    player.gold -= recipe["cost"]
+    player.stats["gold_spent"] = player.stats.get("gold_spent", 0) + recipe["cost"]
+
+    for ing_id, amount in recipe["ingredients"].items():
+        player.inventory[ing_id] -= amount
+
+    # Списать чертёж (он одноразовый)
+    player.inventory[recipe["requires_recipe"]] -= 1
+
+    # Выдать легендарку
+    result_id = recipe["result"]
+    player.inventory[result_id] = player.inventory.get(result_id, 0) + 1
+
+    save_data()
+
+    # Показать эпичное сообщение о создании
+    item_data = ITEMS.get(result_id, {})
+    text = f"""🟠✨ **ЛЕГЕНДАРНОЕ ОРУЖИЕ СОЗДАНО!** ✨🟠
+
+{recipe['emoji']} **{recipe['name']}**
+
+{item_data.get('description', 'Могущественное оружие невероятной силы!')}
+
+_Это оружие будет служить тебе верой и правдой._"""
+
+    keyboard = [[InlineKeyboardButton("🔙 К кузнецу", callback_data="tavern_smith")]]
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
     )
 
 
@@ -271,7 +585,7 @@ async def blacksmith_upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE)
     save_data()
     await query.answer(f"Улучшено: {upgrade['name']}!")
 
-    await show_blacksmith(update, context)
+    await show_smith_upgrades(update, context)
 
 
 async def show_alchemist(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -297,7 +611,7 @@ async def show_alchemist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard.append([InlineKeyboardButton(
             f"{recipe['emoji']} {recipe['name']}",
-            callback_data=f"craft_{recipe_id}"
+            callback_data=f"craft_potion_{recipe_id}"
         )])
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
@@ -311,7 +625,7 @@ async def craft_potion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Создать зелье"""
     query = update.callback_query
 
-    recipe_id = query.data.replace("craft_", "")
+    recipe_id = query.data.replace("craft_potion_", "")
     player = get_player(query.from_user.id)
 
     if recipe_id not in ALCHEMY_RECIPES:
@@ -409,6 +723,36 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"{quest['emoji']} {quest['name']} - {status}\n"
         text += f"  _{quest['desc']}_\n"
 
+    # Легендарные квесты (только для своего класса)
+    text += "\n**🟠 Легендарные:**\n"
+    for quest_id, quest in QUESTS.items():
+        if quest["type"] != "legendary":
+            continue
+
+        # Показать только квест для своего класса
+        if quest.get("class") and quest["class"] != player.player_class:
+            continue
+
+        completed = quest_id in player.completed_quests
+        has_recipe = player.inventory.get(quest["rewards"].get("item", ""), 0) > 0
+
+        if completed or has_recipe:
+            status = "✅ Получен чертёж"
+        else:
+            # Проверить выполнение квеста (победа над боссом хаоса)
+            boss_defeated = "story_chaos" in player.completed_quests
+            status = "🔓 Доступен" if boss_defeated else "🔒 Победи Владыку Хаоса"
+
+        text += f"{quest['emoji']} {quest['name']} - {status}\n"
+        text += f"  _{quest['desc']}_\n"
+
+        # Кнопка получения награды если босс побеждён и награда не получена
+        if not completed and not has_recipe and "story_chaos" in player.completed_quests:
+            keyboard.append([InlineKeyboardButton(
+                f"🎁 {quest['name']}",
+                callback_data=f"claim_quest_{quest_id}"
+            )])
+
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
     await query.edit_message_text(
@@ -429,11 +773,22 @@ async def claim_quest_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     quest = QUESTS[quest_id]
 
-    # Проверить выполнение
-    progress = player.quest_progress.get(quest_id, 0)
-    if progress < quest["target"]:
-        await query.answer("Квест не выполнен!", show_alert=True)
-        return
+    # Для легендарных квестов проверяем победу над боссом хаоса
+    if quest["type"] == "legendary":
+        if "story_chaos" not in player.completed_quests:
+            await query.answer("Сначала победи Владыку Хаоса!", show_alert=True)
+            return
+        # Проверить класс
+        if quest.get("class") and quest["class"] != player.player_class:
+            await query.answer("Это квест не для твоего класса!", show_alert=True)
+            return
+    else:
+        # Проверить выполнение для обычных квестов
+        progress = player.quest_progress.get(quest_id, 0)
+        target = quest["target"]
+        if isinstance(target, int) and progress < target:
+            await query.answer("Квест не выполнен!", show_alert=True)
+            return
 
     if quest_id in player.completed_quests:
         await query.answer("Награда уже получена!", show_alert=True)

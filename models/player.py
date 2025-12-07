@@ -2,7 +2,7 @@
 Класс игрока
 """
 
-from data import CLASSES, ITEMS, LEGENDARY_SETS
+from data import CLASSES, ITEMS, EPIC_SETS
 
 
 class Player:
@@ -24,19 +24,18 @@ class Player:
         # Инвентарь
         self.inventory = {"hp_potion_small": 3, "mana_potion_small": 2}
 
-        # Экипировка
+        # Экипировка (новая система слотов)
         self.equipment = {
-            "weapon": None,
-            "armor": None,
-            "accessory": None
-        }
-
-        # Легендарное снаряжение
-        self.legendary_equipment = {
-            "helmet": None,
-            "chest": None,
-            "gloves": None,
-            "boots": None
+            "weapon": None,      # Оружие
+            "helmet": None,      # Шлем
+            "shoulders": None,   # Плечи
+            "chest": None,       # Грудь
+            "belt": None,        # Пояс
+            "gloves": None,      # Перчатки
+            "leggings": None,    # Поножи
+            "boots": None,       # Сапоги
+            "ring": None,        # Кольцо
+            "necklace": None     # Ожерелье
         }
 
         # Улучшения кузнеца
@@ -95,7 +94,6 @@ class Player:
             "mana": self.mana,
             "inventory": self.inventory,
             "equipment": self.equipment,
-            "legendary_equipment": self.legendary_equipment,
             "blacksmith_upgrades": self.blacksmith_upgrades,
             "current_dungeon": self.current_dungeon,
             "current_floor": self.current_floor,
@@ -120,9 +118,40 @@ class Player:
         if "equipped" in data and "equipment" not in data:
             data["equipment"] = {
                 "weapon": data["equipped"].get("weapon"),
-                "armor": data["equipped"].get("armor"),
-                "accessory": data["equipped"].get("accessory")
+                "helmet": None, "shoulders": None, "chest": None,
+                "belt": None, "gloves": None, "leggings": None,
+                "boots": None, "ring": None, "necklace": None
             }
+
+        # Миграция старой системы equipment (armor/accessory -> новые слоты)
+        if "equipment" in data:
+            old_eq = data["equipment"]
+            # Если есть старые ключи armor/accessory
+            if "armor" in old_eq or "accessory" in old_eq:
+                new_eq = {
+                    "weapon": old_eq.get("weapon"),
+                    "helmet": None, "shoulders": None,
+                    "chest": old_eq.get("armor"),  # armor -> chest
+                    "belt": None, "gloves": None, "leggings": None,
+                    "boots": None,
+                    "ring": old_eq.get("accessory"),  # accessory -> ring
+                    "necklace": None
+                }
+                data["equipment"] = new_eq
+
+            # Миграция legendary_equipment в equipment
+            if "legendary_equipment" in data:
+                leg_eq = data["legendary_equipment"]
+                for slot in ["helmet", "chest", "gloves", "boots"]:
+                    if leg_eq.get(slot) and not data["equipment"].get(slot):
+                        data["equipment"][slot] = leg_eq[slot]
+
+            # Добавить недостающие слоты
+            default_slots = ["weapon", "helmet", "shoulders", "chest", "belt",
+                             "gloves", "leggings", "boots", "ring", "necklace"]
+            for slot in default_slots:
+                if slot not in data["equipment"]:
+                    data["equipment"][slot] = None
 
         if "exp_needed" in data and "exp_to_level" not in data:
             data["exp_to_level"] = data["exp_needed"]
@@ -151,6 +180,36 @@ class Player:
 
         return player
 
+    def get_equipped_stats(self) -> dict:
+        """Получить суммарные статы от всей экипировки"""
+        stats = {
+            "hp": 0, "mana": 0, "damage": 0, "defense": 0,
+            "crit": 0, "dodge": 0, "lifesteal": 0
+        }
+
+        for slot, item_id in self.equipment.items():
+            if not item_id:
+                continue
+            item = ITEMS.get(item_id, {})
+            stats["hp"] += item.get("hp_bonus", 0) + item.get("hp", 0)
+            stats["mana"] += item.get("mana_bonus", 0) + item.get("mana", 0)
+            stats["damage"] += item.get("damage", 0) + item.get("damage_bonus", 0)
+            stats["defense"] += item.get("defense", 0) + item.get("defense_bonus", 0)
+            stats["crit"] += item.get("crit_bonus", 0) + item.get("crit", 0)
+            stats["dodge"] += item.get("dodge_bonus", 0) + item.get("dodge", 0)
+            stats["lifesteal"] += item.get("lifesteal", 0)
+
+        # Бонус от эпического сета
+        set_bonus = self.get_epic_set_bonus()
+        if set_bonus:
+            stats["hp"] += set_bonus.get("hp", 0)
+            stats["mana"] += set_bonus.get("mana", 0)
+            stats["damage"] += set_bonus.get("damage", 0)
+            stats["defense"] += set_bonus.get("defense", 0)
+            stats["crit"] += set_bonus.get("crit", 0)
+
+        return stats
+
     def get_max_hp(self) -> int:
         """Максимальное HP"""
         if not self.player_class:
@@ -162,21 +221,8 @@ class Player:
         # Бонус за уровень
         hp = base_hp + (self.level - 1) * 10
 
-        # Бонус от брони
-        if self.equipment.get("armor"):
-            item = ITEMS.get(self.equipment["armor"], {})
-            hp += item.get("hp_bonus", 0)
-
-        # Бонус от аксессуара
-        if self.equipment.get("accessory"):
-            item = ITEMS.get(self.equipment["accessory"], {})
-            hp += item.get("hp_bonus", 0)
-
-        # Бонус от легендарки
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id and self.player_class in LEGENDARY_SETS:
-                piece = LEGENDARY_SETS[self.player_class]["pieces"].get(slot, {})
-                hp += piece.get("hp", 0)
+        # Бонус от экипировки
+        hp += self.get_equipped_stats()["hp"]
 
         return hp
 
@@ -191,16 +237,8 @@ class Player:
         # Бонус за уровень
         mana = base_mana + (self.level - 1) * 5
 
-        # Бонус от оружия
-        if self.equipment.get("weapon"):
-            item = ITEMS.get(self.equipment["weapon"], {})
-            mana += item.get("mana_bonus", 0)
-
-        # Бонус от легендарки
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id and self.player_class in LEGENDARY_SETS:
-                piece = LEGENDARY_SETS[self.player_class]["pieces"].get(slot, {})
-                mana += piece.get("mana", 0)
+        # Бонус от экипировки
+        mana += self.get_equipped_stats()["mana"]
 
         return mana
 
@@ -215,25 +253,12 @@ class Player:
         # Бонус за уровень
         damage += (self.level - 1) * 2
 
-        # Бонус от оружия
-        if self.equipment.get("weapon"):
-            item = ITEMS.get(self.equipment["weapon"], {})
-            damage += item.get("damage", 0)
-
-        # Бонус от аксессуара
-        if self.equipment.get("accessory"):
-            item = ITEMS.get(self.equipment["accessory"], {})
-            damage += item.get("damage_bonus", 0)
+        # Бонус от экипировки
+        damage += self.get_equipped_stats()["damage"]
 
         # Бонус от кузнеца
         sharpen = self.blacksmith_upgrades.get("sharpen", 0)
         damage += sharpen * 3
-
-        # Бонус от легендарки
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id and self.player_class in LEGENDARY_SETS:
-                piece = LEGENDARY_SETS[self.player_class]["pieces"].get(slot, {})
-                damage += piece.get("damage", 0)
 
         return damage
 
@@ -248,25 +273,12 @@ class Player:
         # Бонус за уровень
         defense += (self.level - 1)
 
-        # Бонус от брони
-        if self.equipment.get("armor"):
-            item = ITEMS.get(self.equipment["armor"], {})
-            defense += item.get("defense", 0)
-
-        # Бонус от аксессуара
-        if self.equipment.get("accessory"):
-            item = ITEMS.get(self.equipment["accessory"], {})
-            defense += item.get("defense_bonus", 0)
+        # Бонус от экипировки
+        defense += self.get_equipped_stats()["defense"]
 
         # Бонус от кузнеца
         reinforce = self.blacksmith_upgrades.get("reinforce", 0)
         defense += reinforce * 3
-
-        # Бонус от легендарки
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id and self.player_class in LEGENDARY_SETS:
-                piece = LEGENDARY_SETS[self.player_class]["pieces"].get(slot, {})
-                defense += piece.get("defense", 0)
 
         return defense
 
@@ -278,23 +290,19 @@ class Player:
         class_data = CLASSES[self.player_class]
         crit = class_data["base_crit"]
 
-        # Бонус от оружия
-        if self.equipment.get("weapon"):
-            item = ITEMS.get(self.equipment["weapon"], {})
-            crit += item.get("crit_bonus", 0)
-
-        # Бонус от аксессуара
-        if self.equipment.get("accessory"):
-            item = ITEMS.get(self.equipment["accessory"], {})
-            crit += item.get("crit_bonus", 0)
-
-        # Бонус от легендарки
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id and self.player_class in LEGENDARY_SETS:
-                piece = LEGENDARY_SETS[self.player_class]["pieces"].get(slot, {})
-                crit += piece.get("crit", 0)
+        # Бонус от экипировки
+        crit += self.get_equipped_stats()["crit"]
 
         return crit
+
+    def get_dodge_chance(self) -> int:
+        """Шанс уклонения"""
+        dodge = 0
+
+        # Бонус от экипировки
+        dodge += self.get_equipped_stats()["dodge"]
+
+        return dodge
 
     def get_lifesteal(self) -> float:
         """Вампиризм"""
@@ -304,18 +312,43 @@ class Player:
         if self.blacksmith_upgrades.get("enchant_life"):
             lifesteal += 0.1
 
-        # От оружия
-        if self.equipment.get("weapon"):
-            item = ITEMS.get(self.equipment["weapon"], {})
-            lifesteal += item.get("lifesteal", 0)
+        # От экипировки
+        lifesteal += self.get_equipped_stats()["lifesteal"]
 
         return lifesteal
 
-    def count_legendary_pieces(self) -> int:
-        """Подсчёт частей легендарного сета"""
+    def get_epic_set_bonus(self) -> dict:
+        """Получить бонус от эпического сета"""
+        # Подсчитать надетые части каждого сета
+        set_counts = {}
+        for slot, item_id in self.equipment.items():
+            if not item_id:
+                continue
+            item = ITEMS.get(item_id, {})
+            set_id = item.get("set")
+            if set_id:
+                set_counts[set_id] = set_counts.get(set_id, 0) + 1
+
+        # Найти лучший бонус
+        best_bonus = {}
+        for set_id, count in set_counts.items():
+            if set_id in EPIC_SETS:
+                epic_set = EPIC_SETS[set_id]
+                if count >= 2 and "bonus_2" in epic_set:
+                    best_bonus = epic_set.get("bonus_2_stats", {})
+                if count >= 4 and "bonus_4" in epic_set:
+                    best_bonus = epic_set.get("bonus_4_stats", best_bonus)
+
+        return best_bonus
+
+    def count_epic_pieces(self, set_id: str) -> int:
+        """Подсчёт частей эпического сета"""
         count = 0
-        for slot, item_id in self.legendary_equipment.items():
-            if item_id:
+        for slot, item_id in self.equipment.items():
+            if not item_id:
+                continue
+            item = ITEMS.get(item_id, {})
+            if item.get("set") == set_id:
                 count += 1
         return count
 
@@ -389,9 +422,11 @@ class Player:
             self.achievements.append("quester")
             new_achievements.append(ACHIEVEMENTS["quester"])
 
-        # Легендарный сет
-        if "legend" not in self.achievements and self.count_legendary_pieces() >= 4:
-            self.achievements.append("legend")
-            new_achievements.append(ACHIEVEMENTS["legend"])
+        # Полный эпический сет (любой)
+        for set_id in EPIC_SETS:
+            if "legend" not in self.achievements and self.count_epic_pieces(set_id) >= 4:
+                self.achievements.append("legend")
+                new_achievements.append(ACHIEVEMENTS["legend"])
+                break
 
         return new_achievements

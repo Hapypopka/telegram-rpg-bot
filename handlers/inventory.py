@@ -5,7 +5,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from data import ITEMS, LEGENDARY_SETS, CLASSES
+from data import ITEMS, EPIC_SETS, RARITY_EMOJI, SLOT_NAMES
 from utils.storage import get_player, save_data
 
 
@@ -34,9 +34,28 @@ def get_item_stats_text(item: dict) -> str:
         stats.append("🔥берсерк")
     if "heal" in item:
         stats.append(f"❤️+{item['heal']}")
-    if "mana" in item:
+    if "mana" in item and item.get("type") == "consumable":
         stats.append(f"💙+{item['mana']}")
     return " ".join(stats)
+
+
+def get_rarity_name(rarity: str) -> str:
+    """Получить название редкости"""
+    names = {
+        "common": "Обычный",
+        "rare": "Редкий",
+        "epic": "Эпический",
+        "legendary": "Легендарный"
+    }
+    return names.get(rarity, "")
+
+
+def format_item_name(item: dict, item_id: str) -> str:
+    """Форматировать имя предмета с редкостью"""
+    rarity = item.get("rarity", "common")
+    emoji = RARITY_EMOJI.get(rarity, "")
+    name = item.get("name", item_id)
+    return f"{emoji}{item.get('emoji', '')} {name}".strip()
 
 
 async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,13 +80,14 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
         item_type = item.get("type", "unknown")
         emoji = item.get("emoji", "📦")
         name = item.get("name", item_id)
+        rarity_emoji = RARITY_EMOJI.get(item.get("rarity", ""), "")
 
         if item_type == "resource":
             resources.append(f"{emoji} {name}: {count}")
         elif item_type == "consumable":
             consumables.append(f"{emoji} {name}: {count}")
         elif item_type in ["weapon", "armor", "accessory"]:
-            equipment.append(f"{emoji} {name}: {count}")
+            equipment.append(f"{rarity_emoji}{emoji} {name}: {count}")
 
     if resources:
         text += "**🌿 Ресурсы:**\n" + "\n".join(resources) + "\n\n"
@@ -93,66 +113,83 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показать снаряжение"""
+    """Показать снаряжение (10 слотов)"""
     query = update.callback_query
     await query.answer()
 
     player = get_player(query.from_user.id)
 
-    # Текущее снаряжение
-    weapon = player.equipment.get("weapon")
-    armor = player.equipment.get("armor")
-    accessory = player.equipment.get("accessory")
+    text = "⚔️ **СНАРЯЖЕНИЕ**\n\n"
 
-    weapon_text = "Пусто"
-    if weapon:
-        item = ITEMS.get(weapon, {})
-        weapon_text = f"{item.get('emoji', '')} {item.get('name', weapon)}"
+    # Показать все слоты
+    slot_emojis = {
+        "weapon": "🗡️", "helmet": "⛑️", "shoulders": "🦺",
+        "chest": "🎽", "belt": "🎗️", "gloves": "🧤",
+        "leggings": "👖", "boots": "👢", "ring": "💍", "necklace": "📿"
+    }
 
-    armor_text = "Пусто"
-    if armor:
-        item = ITEMS.get(armor, {})
-        armor_text = f"{item.get('emoji', '')} {item.get('name', armor)}"
+    for slot, slot_name in SLOT_NAMES.items():
+        item_id = player.equipment.get(slot)
+        emoji = slot_emojis.get(slot, "📦")
 
-    accessory_text = "Пусто"
-    if accessory:
-        item = ITEMS.get(accessory, {})
-        acc_stats = get_item_stats_text(item)
-        accessory_text = f"{item.get('emoji', '')} {item.get('name', accessory)}\n   {acc_stats}"
-
-    # Легендарное снаряжение
-    legendary_text = ""
-    pieces = player.count_legendary_pieces()
-    if pieces > 0:
-        legendary_text = f"\n\n✨ **Легендарный сет:** {pieces}/4 частей"
-        for slot, item_id in player.legendary_equipment.items():
-            if item_id:
-                legendary_text += f"\n  {slot}: {item_id}"
+        if item_id:
+            item = ITEMS.get(item_id, {})
+            rarity = item.get("rarity", "common")
+            rarity_emoji = RARITY_EMOJI.get(rarity, "")
+            item_emoji = item.get("emoji", "")
+            name = item.get("name", item_id)
+            text += f"{emoji} {slot_name}: {rarity_emoji}{item_emoji} {name}\n"
+        else:
+            text += f"{emoji} {slot_name}: _Пусто_\n"
 
     # Статы
     total_damage = player.get_total_damage()
     total_defense = player.get_total_defense()
     total_crit = player.get_crit_chance()
+    total_dodge = player.get_dodge_chance()
+    total_hp = player.get_max_hp()
+    total_mana = player.get_max_mana()
 
-    text = f"""⚔️ **СНАРЯЖЕНИЕ**
-
-🗡️ Оружие: {weapon_text}
-🛡️ Броня: {armor_text}
-💍 Аксессуар: {accessory_text}{legendary_text}
-
+    text += f"""
 📊 **Итоговые статы:**
-⚔️ Урон: {total_damage}
-🛡️ Защита: {total_defense}
-🎯 Крит: {total_crit}%"""
+❤️ HP: {total_hp} | 💙 Мана: {total_mana}
+⚔️ Урон: {total_damage} | 🛡️ Защита: {total_defense}
+🎯 Крит: {total_crit}% | 💨 Уклон: {total_dodge}%"""
 
+    # Проверить сетовые бонусы
+    set_text = ""
+    for set_id, epic_set in EPIC_SETS.items():
+        count = player.count_epic_pieces(set_id)
+        if count > 0:
+            set_text += f"\n\n🟣 **{epic_set['name']}** ({count}/8)"
+            if count >= 2:
+                set_text += f"\n  ✅ 2шт: {epic_set['bonus_2']}"
+            if count >= 4:
+                set_text += f"\n  ✅ 4шт: {epic_set['bonus_4']}"
+
+    text += set_text
+
+    # Кнопки по категориям
     keyboard = [
         [
-            InlineKeyboardButton("🗡️ Оружие", callback_data="equip_weapon"),
-            InlineKeyboardButton("🛡️ Броня", callback_data="equip_armor")
+            InlineKeyboardButton("🗡️ Оружие", callback_data="slot_weapon"),
+            InlineKeyboardButton("⛑️ Голова", callback_data="slot_helmet")
         ],
         [
-            InlineKeyboardButton("💍 Аксессуар", callback_data="equip_accessory"),
-            InlineKeyboardButton("✨ Легендарки", callback_data="equip_legendary")
+            InlineKeyboardButton("🦺 Плечи", callback_data="slot_shoulders"),
+            InlineKeyboardButton("🎽 Грудь", callback_data="slot_chest")
+        ],
+        [
+            InlineKeyboardButton("🎗️ Пояс", callback_data="slot_belt"),
+            InlineKeyboardButton("🧤 Перчатки", callback_data="slot_gloves")
+        ],
+        [
+            InlineKeyboardButton("👖 Поножи", callback_data="slot_leggings"),
+            InlineKeyboardButton("👢 Сапоги", callback_data="slot_boots")
+        ],
+        [
+            InlineKeyboardButton("💍 Кольцо", callback_data="slot_ring"),
+            InlineKeyboardButton("📿 Ожерелье", callback_data="slot_necklace")
         ],
         [InlineKeyboardButton("🔙 Назад", callback_data="inventory")]
     ]
@@ -162,97 +199,69 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Экипировать предмет"""
+async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать предметы для конкретного слота"""
     query = update.callback_query
+    await query.answer()
 
-    data = query.data
+    slot = query.data.replace("slot_", "")
     player = get_player(query.from_user.id)
 
-    # Определить тип слота
-    if data.startswith("equip_weapon_"):
-        slot = "weapon"
-        item_type = "weapon"
-        item_id = data.replace("equip_weapon_", "")
-    elif data.startswith("equip_armor_"):
-        slot = "armor"
-        item_type = "armor"
-        item_id = data.replace("equip_armor_", "")
-    elif data.startswith("equip_accessory_"):
-        slot = "accessory"
-        item_type = "accessory"
-        item_id = data.replace("equip_accessory_", "")
-    elif data == "equip_weapon":
-        await query.answer()
-        slot = "weapon"
-        item_type = "weapon"
-        item_id = None
-    elif data == "equip_armor":
-        await query.answer()
-        slot = "armor"
-        item_type = "armor"
-        item_id = None
-    elif data == "equip_accessory":
-        await query.answer()
-        slot = "accessory"
-        item_type = "accessory"
-        item_id = None
-    elif data.startswith("equip_legendary"):
-        await query.answer()
-        await show_legendary_menu(query, player)
-        return
+    slot_name = SLOT_NAMES.get(slot, slot)
+    text = f"**{slot_name}**\n\n"
+
+    # Текущий предмет
+    current_item_id = player.equipment.get(slot)
+    if current_item_id:
+        current_item = ITEMS.get(current_item_id, {})
+        rarity_emoji = RARITY_EMOJI.get(current_item.get("rarity", ""), "")
+        text += f"Надето: {rarity_emoji}{current_item.get('emoji', '')} {current_item.get('name', current_item_id)}\n"
+        stats = get_item_stats_text(current_item)
+        if stats:
+            text += f"  {stats}\n"
     else:
-        await query.answer()
-        return
+        text += "Надето: _Ничего_\n"
 
-    # Если это команда экипировки конкретного предмета
-    if item_id and item_id in ITEMS:
-        # Снять текущее
-        current = player.equipment.get(slot)
-        if current:
-            player.inventory[current] = player.inventory.get(current, 0) + 1
-
-        # Надеть новое
-        player.equipment[slot] = item_id
-        player.inventory[item_id] = player.inventory.get(item_id, 1) - 1
-
-        save_data()
-        await query.answer(f"Экипировано: {ITEMS[item_id]['name']}")
-        await show_equipment(update, context)
-        return
-
-    # Показать список предметов для экипировки
-    text = f"**Выбери {item_type}:**\n\n"
+    text += "\n**Доступно в инвентаре:**\n"
 
     keyboard = []
+    found = False
 
     for item_id, count in player.inventory.items():
         if count <= 0:
             continue
 
         item = ITEMS.get(item_id, {})
-        if item.get("type") != item_type:
+        item_slot = item.get("slot")
+
+        # Проверить совместимость слота
+        if item_slot != slot:
             continue
 
+        found = True
+        rarity = item.get("rarity", "common")
+        rarity_emoji = RARITY_EMOJI.get(rarity, "")
         name = item.get("name", item_id)
         emoji = item.get("emoji", "📦")
+        stats = get_item_stats_text(item)
+        rarity_name = get_rarity_name(rarity)
 
-        stats_text = get_item_stats_text(item)
-
-        text += f"{emoji} **{name}** ({count})\n"
-        if stats_text:
-            text += f"   {stats_text}\n"
+        text += f"\n{rarity_emoji}{emoji} **{name}** ({count})"
+        if rarity_name:
+            text += f" [{rarity_name}]"
+        if stats:
+            text += f"\n  {stats}"
 
         keyboard.append([InlineKeyboardButton(
-            f"{emoji} {name}",
-            callback_data=f"equip_{item_type}_{item_id}"
+            f"{rarity_emoji}{emoji} {name}",
+            callback_data=f"equip_{slot}_{item_id}"
         )])
 
-    if not keyboard:
-        text += "_Нет доступных предметов_"
+    if not found:
+        text += "_Нет подходящих предметов_"
 
     # Кнопка снять
-    if player.equipment.get(slot):
+    if current_item_id:
         keyboard.append([InlineKeyboardButton(
             "❌ Снять",
             callback_data=f"unequip_{slot}"
@@ -265,63 +274,54 @@ async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def show_legendary_menu(query, player):
-    """Показать меню легендарного снаряжения"""
-    class_data = CLASSES.get(player.player_class, {})
+async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Экипировать предмет"""
+    query = update.callback_query
 
-    if player.player_class not in LEGENDARY_SETS:
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="equipment")]]
-        await query.edit_message_text(
-            "У твоего класса нет легендарного сета.",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    data = query.data
+
+    # Формат: equip_SLOT_ITEMID
+    parts = data.split("_", 2)
+    if len(parts) < 3:
+        await query.answer()
         return
 
-    set_data = LEGENDARY_SETS[player.player_class]
+    slot = parts[1]
+    item_id = parts[2]
 
-    text = f"✨ **{set_data['name']}**\n\n"
+    player = get_player(query.from_user.id)
 
-    pieces = player.count_legendary_pieces()
-    text += f"Собрано: {pieces}/4\n\n"
+    # Проверить наличие предмета
+    if player.inventory.get(item_id, 0) <= 0:
+        await query.answer("Нет такого предмета!", show_alert=True)
+        return
 
-    if pieces >= 2:
-        text += f"✅ 2 части: {set_data['bonus_2']}\n"
-    else:
-        text += f"❌ 2 части: {set_data['bonus_2']}\n"
+    # Проверить совместимость слота
+    item = ITEMS.get(item_id, {})
+    if item.get("slot") != slot:
+        await query.answer("Предмет не подходит для этого слота!", show_alert=True)
+        return
 
-    if pieces >= 4:
-        text += f"✅ 4 части: {set_data['bonus_4']}\n"
-    else:
-        text += f"❌ 4 части: {set_data['bonus_4']}\n"
+    # Снять текущее
+    current = player.equipment.get(slot)
+    if current:
+        player.inventory[current] = player.inventory.get(current, 0) + 1
 
-    text += "\n**Части сета:**\n"
+    # Надеть новое
+    player.equipment[slot] = item_id
+    player.inventory[item_id] = player.inventory.get(item_id, 1) - 1
 
-    keyboard = []
+    save_data()
+    await query.answer(f"Экипировано: {item.get('name', item_id)}")
 
-    for slot, piece in set_data["pieces"].items():
-        equipped = player.legendary_equipment.get(slot)
-        has_piece = player.inventory.get(f"legendary_{player.player_class}_{slot}", 0) > 0
-
-        status = "✅" if equipped else ("📦" if has_piece else "❌")
-        text += f"{status} {piece['emoji']} {piece['name']}\n"
-
-        if has_piece and not equipped:
-            keyboard.append([InlineKeyboardButton(
-                f"Надеть {piece['name']}",
-                callback_data=f"equip_leg_{slot}"
-            )])
-
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="equipment")])
-
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+    # Вернуться к списку слота
+    query.data = f"slot_{slot}"
+    await show_slot_items(update, context)
 
 
 async def unequip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Снять предмет"""
     query = update.callback_query
-    await query.answer()
 
     slot = query.data.replace("unequip_", "")
     player = get_player(query.from_user.id)
@@ -332,30 +332,109 @@ async def unequip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         player.equipment[slot] = None
         save_data()
         await query.answer("Предмет снят")
+    else:
+        await query.answer()
 
-    await show_equipment(update, context)
+    # Вернуться к списку слота
+    query.data = f"slot_{slot}"
+    await show_slot_items(update, context)
 
 
 async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показать магазин"""
+    """Показать магазин (только обычные предметы)"""
     query = update.callback_query
     await query.answer()
 
     player = get_player(query.from_user.id)
 
-    text = f"🛒 **МАГАЗИН**\n\n💰 Золото: {player.gold}\n\n"
+    text = f"""🛒 **МАГАЗИН**
+
+💰 Золото: {player.gold}
+
+_В магазине продаются только обычные предметы.
+Редкие можно скрафтить в кузнице._"""
 
     keyboard = [
         [
-            InlineKeyboardButton("⚔️ Оружие", callback_data="shop_weapons"),
-            InlineKeyboardButton("🛡️ Броня", callback_data="shop_armor")
+            InlineKeyboardButton("🗡️ Оружие", callback_data="shop_weapon"),
+            InlineKeyboardButton("⛑️ Шлемы", callback_data="shop_helmet")
         ],
         [
-            InlineKeyboardButton("💍 Аксессуары", callback_data="shop_accessories"),
-            InlineKeyboardButton("🧪 Зелья", callback_data="shop_potions")
+            InlineKeyboardButton("🦺 Плечи", callback_data="shop_shoulders"),
+            InlineKeyboardButton("🎽 Грудь", callback_data="shop_chest")
         ],
+        [
+            InlineKeyboardButton("🎗️ Пояса", callback_data="shop_belt"),
+            InlineKeyboardButton("🧤 Перчатки", callback_data="shop_gloves")
+        ],
+        [
+            InlineKeyboardButton("👖 Поножи", callback_data="shop_leggings"),
+            InlineKeyboardButton("👢 Сапоги", callback_data="shop_boots")
+        ],
+        [
+            InlineKeyboardButton("💍 Кольца", callback_data="shop_ring"),
+            InlineKeyboardButton("📿 Ожерелья", callback_data="shop_necklace")
+        ],
+        [InlineKeyboardButton("🧪 Зелья", callback_data="shop_consumable")],
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
     ]
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+    )
+
+
+async def show_shop_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать категорию магазина"""
+    query = update.callback_query
+    await query.answer()
+
+    category = query.data.replace("shop_", "")
+    player = get_player(query.from_user.id)
+
+    # Для зелий ищем по type, для остальных по slot
+    is_consumable = category == "consumable"
+
+    slot_name = "Зелья" if is_consumable else SLOT_NAMES.get(category, category)
+    text = f"🛒 **{slot_name}**\n\n💰 Золото: {player.gold}\n\n"
+
+    keyboard = []
+
+    for item_id, item in ITEMS.items():
+        # Только обычные предметы (common) в магазине
+        if item.get("rarity", "common") != "common":
+            continue
+
+        # Фильтр по категории
+        if is_consumable:
+            if item.get("type") != "consumable":
+                continue
+        else:
+            if item.get("slot") != category:
+                continue
+
+        # Должна быть цена
+        if "price" not in item or item["price"] <= 0:
+            continue
+
+        emoji = item.get("emoji", "📦")
+        name = item.get("name", item_id)
+        price = item["price"]
+        stats = get_item_stats_text(item)
+
+        text += f"{emoji} **{name}** - {price}💰\n"
+        if stats:
+            text += f"  {stats}\n"
+
+        keyboard.append([InlineKeyboardButton(
+            f"{emoji} {name} ({price}💰)",
+            callback_data=f"buy_{item_id}"
+        )])
+
+    if not keyboard:
+        text += "_Нет товаров_"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="shop")])
 
     await query.edit_message_text(
         text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
@@ -366,76 +445,32 @@ async def buy_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Купить предмет"""
     query = update.callback_query
 
-    # Проверить, это категория или покупка
-    data = query.data
-
+    item_id = query.data.replace("buy_", "")
     player = get_player(query.from_user.id)
 
-    # Категории магазина
-    if data in ["shop_weapons", "shop_armor", "shop_accessories", "shop_potions"]:
-        await query.answer()
-
-        category_map = {
-            "shop_weapons": "weapon",
-            "shop_armor": "armor",
-            "shop_accessories": "accessory",
-            "shop_potions": "consumable"
-        }
-        category = category_map[data]
-
-        text = f"🛒 **МАГАЗИН**\n\n💰 Золото: {player.gold}\n\n"
-
-        keyboard = []
-
-        for item_id, item in ITEMS.items():
-            if item.get("type") != category:
-                continue
-            if "price" not in item:
-                continue
-
-            emoji = item.get("emoji", "📦")
-            name = item.get("name", item_id)
-            price = item["price"]
-
-            stats_text = get_item_stats_text(item)
-
-            text += f"{emoji} **{name}** - {price}💰\n"
-            if stats_text:
-                text += f"   {stats_text}\n"
-
-            keyboard.append([InlineKeyboardButton(
-                f"{emoji} {name} ({price}💰)",
-                callback_data=f"buy_{item_id}"
-            )])
-
-        keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="shop")])
-
-        await query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-        )
+    if item_id not in ITEMS:
+        await query.answer("Предмет не найден!", show_alert=True)
         return
 
-    # Покупка конкретного предмета
-    if data.startswith("buy_"):
-        item_id = data.replace("buy_", "")
+    item = ITEMS[item_id]
 
-        if item_id not in ITEMS:
-            await query.answer("Предмет не найден!", show_alert=True)
-            return
+    # Только обычные можно купить в магазине
+    if item.get("rarity", "common") != "common" and item.get("type") != "consumable":
+        await query.answer("Этот предмет нельзя купить в магазине!", show_alert=True)
+        return
 
-        item = ITEMS[item_id]
-        price = item.get("price", 0)
+    price = item.get("price", 0)
 
-        if player.gold < price:
-            await query.answer("Недостаточно золота!", show_alert=True)
-            return
+    if player.gold < price:
+        await query.answer("Недостаточно золота!", show_alert=True)
+        return
 
-        player.gold -= price
-        player.stats["gold_spent"] = player.stats.get("gold_spent", 0) + price
-        player.inventory[item_id] = player.inventory.get(item_id, 0) + 1
+    player.gold -= price
+    player.stats["gold_spent"] = player.stats.get("gold_spent", 0) + price
+    player.inventory[item_id] = player.inventory.get(item_id, 0) + 1
 
-        save_data()
-        await query.answer(f"Куплено: {item['name']}")
+    save_data()
+    await query.answer(f"Куплено: {item['name']}")
 
 
 async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -458,14 +493,20 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 continue
 
             item = ITEMS.get(item_id, {})
-            if "price" not in item:
+            price = item.get("price", 0)
+            if price <= 0:
                 continue
 
+            rarity = item.get("rarity", "common")
+            rarity_emoji = RARITY_EMOJI.get(rarity, "")
             emoji = item.get("emoji", "📦")
             name = item.get("name", item_id)
-            sell_price = item["price"] // 2
 
-            text += f"{emoji} {name} ({count}) - {sell_price}💰\n"
+            # Цена продажи зависит от редкости
+            sell_mult = {"common": 0.5, "rare": 0.6, "epic": 0.7, "legendary": 0.8}
+            sell_price = int(price * sell_mult.get(rarity, 0.5))
+
+            text += f"{rarity_emoji}{emoji} {name} ({count}) - {sell_price}💰\n"
 
             keyboard.append([InlineKeyboardButton(
                 f"Продать {name} ({sell_price}💰)",
@@ -491,7 +532,11 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         item = ITEMS.get(item_id, {})
-        sell_price = item.get("price", 0) // 2
+        price = item.get("price", 0)
+        rarity = item.get("rarity", "common")
+
+        sell_mult = {"common": 0.5, "rare": 0.6, "epic": 0.7, "legendary": 0.8}
+        sell_price = int(price * sell_mult.get(rarity, 0.5))
 
         player.inventory[item_id] -= 1
         player.gold += sell_price
@@ -501,4 +546,5 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer(f"Продано за {sell_price} золота")
 
         # Обновить меню продажи
+        query.data = "sell_menu"
         await sell_item(update, context)

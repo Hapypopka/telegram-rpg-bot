@@ -134,45 +134,61 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Экипировать предмет"""
     query = update.callback_query
-    await query.answer()
 
     data = query.data
     player = get_player(query.from_user.id)
 
     # Определить тип слота
-    if data.startswith("equip_weapon"):
+    if data.startswith("equip_weapon_"):
         slot = "weapon"
         item_type = "weapon"
-    elif data.startswith("equip_armor"):
+        item_id = data.replace("equip_weapon_", "")
+    elif data.startswith("equip_armor_"):
         slot = "armor"
         item_type = "armor"
-    elif data.startswith("equip_accessory"):
+        item_id = data.replace("equip_armor_", "")
+    elif data.startswith("equip_accessory_"):
         slot = "accessory"
         item_type = "accessory"
+        item_id = data.replace("equip_accessory_", "")
+    elif data == "equip_weapon":
+        await query.answer()
+        slot = "weapon"
+        item_type = "weapon"
+        item_id = None
+    elif data == "equip_armor":
+        await query.answer()
+        slot = "armor"
+        item_type = "armor"
+        item_id = None
+    elif data == "equip_accessory":
+        await query.answer()
+        slot = "accessory"
+        item_type = "accessory"
+        item_id = None
     elif data.startswith("equip_legendary"):
-        # Показать легендарное снаряжение
+        await query.answer()
         await show_legendary_menu(query, player)
         return
     else:
+        await query.answer()
         return
 
     # Если это команда экипировки конкретного предмета
-    if "_" in data.replace(f"equip_{item_type}_", ""):
-        item_id = data.replace(f"equip_{item_type}_", "")
-        if item_id and item_id in ITEMS:
-            # Снять текущее
-            current = player.equipment.get(slot)
-            if current:
-                player.inventory[current] = player.inventory.get(current, 0) + 1
+    if item_id and item_id in ITEMS:
+        # Снять текущее
+        current = player.equipment.get(slot)
+        if current:
+            player.inventory[current] = player.inventory.get(current, 0) + 1
 
-            # Надеть новое
-            player.equipment[slot] = item_id
-            player.inventory[item_id] = player.inventory.get(item_id, 1) - 1
+        # Надеть новое
+        player.equipment[slot] = item_id
+        player.inventory[item_id] = player.inventory.get(item_id, 1) - 1
 
-            save_data()
-            await query.answer(f"Экипировано: {ITEMS[item_id]['name']}")
-            await show_equipment(update, context)
-            return
+        save_data()
+        await query.answer(f"Экипировано: {ITEMS[item_id]['name']}")
+        await show_equipment(update, context)
+        return
 
     # Показать список предметов для экипировки
     text = f"**Выбери {item_type}:**\n\n"

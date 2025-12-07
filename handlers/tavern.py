@@ -860,15 +860,43 @@ async def show_socket_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
+    # Подсчитать суммарные бонусы от сокетов
+    socket_stats = player.get_socket_stats()
+    active_count = sum(1 for s in player.item_sockets.values() if s and player.equipment.get(list(player.item_sockets.keys())[list(player.item_sockets.values()).index(s)]))
+
     text = f"""💎 СОКЕТЫ
 
 💰 Золото: {player.gold:,}
 
-Вставь сокет в экипировку для бонусов.
-Каждый слот экипировки может иметь 1 сокет.
-Сокет можно заменить (старый будет потерян).
+Суммарные бонусы от сокетов:"""
 
-Выбери слот экипировки:"""
+    has_bonus = False
+    if socket_stats.get("damage", 0) > 0:
+        text += f"\n  ⚔️ Урон: +{socket_stats['damage']}"
+        has_bonus = True
+    if socket_stats.get("defense", 0) > 0:
+        text += f"\n  🛡️ Защита: +{socket_stats['defense']}"
+        has_bonus = True
+    if socket_stats.get("hp", 0) > 0:
+        text += f"\n  ❤️ HP: +{socket_stats['hp']}"
+        has_bonus = True
+    if socket_stats.get("mana", 0) > 0:
+        text += f"\n  💙 Мана: +{socket_stats['mana']}"
+        has_bonus = True
+    if socket_stats.get("crit", 0) > 0:
+        text += f"\n  💥 Крит: +{socket_stats['crit']}%"
+        has_bonus = True
+    if socket_stats.get("dodge", 0) > 0:
+        text += f"\n  💨 Уклонение: +{socket_stats['dodge']}%"
+        has_bonus = True
+    if socket_stats.get("lifesteal", 0) > 0:
+        text += f"\n  🩸 Вампиризм: +{socket_stats['lifesteal']}%"
+        has_bonus = True
+
+    if not has_bonus:
+        text += "\n  Нет активных сокетов"
+
+    text += "\n\nВыбери слот экипировки:"
 
     keyboard = []
 
@@ -1035,15 +1063,42 @@ async def remove_socket(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_socket_menu_direct(query, player):
     """Показать меню сокетов (прямой вызов)"""
+    # Подсчитать суммарные бонусы от сокетов
+    socket_stats = player.get_socket_stats()
+
     text = f"""💎 СОКЕТЫ
 
 💰 Золото: {player.gold:,}
 
-Вставь сокет в экипировку для бонусов.
-Каждый слот экипировки может иметь 1 сокет.
-Сокет можно заменить (старый будет потерян).
+Суммарные бонусы от сокетов:"""
 
-Выбери слот экипировки:"""
+    has_bonus = False
+    if socket_stats.get("damage", 0) > 0:
+        text += f"\n  ⚔️ Урон: +{socket_stats['damage']}"
+        has_bonus = True
+    if socket_stats.get("defense", 0) > 0:
+        text += f"\n  🛡️ Защита: +{socket_stats['defense']}"
+        has_bonus = True
+    if socket_stats.get("hp", 0) > 0:
+        text += f"\n  ❤️ HP: +{socket_stats['hp']}"
+        has_bonus = True
+    if socket_stats.get("mana", 0) > 0:
+        text += f"\n  💙 Мана: +{socket_stats['mana']}"
+        has_bonus = True
+    if socket_stats.get("crit", 0) > 0:
+        text += f"\n  💥 Крит: +{socket_stats['crit']}%"
+        has_bonus = True
+    if socket_stats.get("dodge", 0) > 0:
+        text += f"\n  💨 Уклонение: +{socket_stats['dodge']}%"
+        has_bonus = True
+    if socket_stats.get("lifesteal", 0) > 0:
+        text += f"\n  🩸 Вампиризм: +{socket_stats['lifesteal']}%"
+        has_bonus = True
+
+    if not has_bonus:
+        text += "\n  Нет активных сокетов"
+
+    text += "\n\nВыбери слот экипировки:"
 
     keyboard = []
 

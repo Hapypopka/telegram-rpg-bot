@@ -18,8 +18,7 @@ async def show_tavern(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    text = """🍺 **ТАВЕРНА**
-
+    text = """🍺 **ТАВЕРНА
 Добро пожаловать в таверну "Пьяный Гоблин"!
 
 Здесь ты можешь:
@@ -41,8 +40,7 @@ async def show_tavern(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def show_food_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,8 +66,7 @@ async def show_food_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def buy_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -164,8 +161,7 @@ async def show_mercenaries(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def hire_mercenary(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -212,8 +208,7 @@ async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for recipe in LEGENDARY_CRAFT_RECIPES.values()
     )
 
-    text = f"""⚒️ **КУЗНЕЦ**
-
+    text = f"""⚒️ **КУЗНЕЦ
 💰 Золото: {player.gold}
 
 Кузнец может улучшить твоё снаряжение
@@ -235,8 +230,7 @@ async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def show_smith_upgrades(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -269,8 +263,7 @@ async def show_smith_upgrades(update: Update, context: ContextTypes.DEFAULT_TYPE
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def show_craft_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -280,8 +273,7 @@ async def show_craft_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = f"""🔵 **КРАФТ РЕДКИХ**
-
+    text = f"""🔵 **КРАФТ РЕДКИХ
 💰 Золото: {player.gold}
 
 Выбери категорию снаряжения:"""
@@ -311,20 +303,13 @@ async def show_craft_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
-async def show_craft_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показать рецепты крафта для категории"""
-    query = update.callback_query
-    await query.answer()
-
-    category = query.data.replace("craft_cat_", "")
-    player = get_player(query.from_user.id)
-
+async def show_craft_category_direct(query, player, category):
+    """Показать рецепты крафта для категории (прямой вызов)"""
     slot_name = SLOT_NAMES.get(category, category)
-    text = f"🔵 **Крафт: {slot_name}**\n\n💰 Золото: {player.gold}\n\n"
+    text = f"🔵 Крафт: {slot_name}\n\n💰 Золото: {player.gold}\n\n"
 
     keyboard = []
 
@@ -351,7 +336,7 @@ async def show_craft_category(update: Update, context: ContextTypes.DEFAULT_TYPE
         if player.gold < recipe["cost"]:
             can_craft = False
 
-        text += f"{recipe['emoji']} **{recipe['name']}**\n"
+        text += f"{recipe['emoji']} {recipe['name']}\n"
         text += f"  💰 {recipe['cost']} золота\n"
         text += f"  {' | '.join(ingredients_text)}\n\n"
 
@@ -362,13 +347,24 @@ async def show_craft_category(update: Update, context: ContextTypes.DEFAULT_TYPE
         )])
 
     if not keyboard:
-        text += "_Нет рецептов для этой категории_"
+        text += "Нет рецептов для этой категории"
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="smith_craft")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
+async def show_craft_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать рецепты крафта для категории"""
+    query = update.callback_query
+    await query.answer()
+
+    category = query.data.replace("craft_cat_", "")
+    player = get_player(query.from_user.id)
+
+    await show_craft_category_direct(query, player, category)
 
 
 async def craft_rare_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -411,8 +407,7 @@ async def craft_rare_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer(f"Создано: {recipe['name']}!")
 
     # Вернуться к категории
-    query.data = f"craft_cat_{recipe['slot']}"
-    await show_craft_category(update, context)
+    await show_craft_category_direct(query, player, recipe['slot'])
 
 
 async def show_legendary_craft(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -422,8 +417,7 @@ async def show_legendary_craft(update: Update, context: ContextTypes.DEFAULT_TYP
 
     player = get_player(query.from_user.id)
 
-    text = f"""🟠 **ЛЕГЕНДАРНЫЙ КРАФТ**
-
+    text = f"""🟠 **ЛЕГЕНДАРНЫЙ КРАФТ
 💰 Золото: {player.gold}
 
 Создай уникальное легендарное оружие!
@@ -475,8 +469,7 @@ async def show_legendary_craft(update: Update, context: ContextTypes.DEFAULT_TYP
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def craft_legendary(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -534,8 +527,7 @@ async def craft_legendary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     item_data = ITEMS.get(result_id, {})
     text = f"""🟠✨ **ЛЕГЕНДАРНОЕ ОРУЖИЕ СОЗДАНО!** ✨🟠
 
-{recipe['emoji']} **{recipe['name']}**
-
+{recipe['emoji']} **{recipe['name']}
 {item_data.get('description', 'Могущественное оружие невероятной силы!')}
 
 _Это оружие будет служить тебе верой и правдой._"""
@@ -543,8 +535,7 @@ _Это оружие будет служить тебе верой и правд
     keyboard = [[InlineKeyboardButton("🔙 К кузнецу", callback_data="tavern_smith")]]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def blacksmith_upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -756,8 +747,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def claim_quest_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -17,7 +17,7 @@ async def show_achievements(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "🏆 **ДОСТИЖЕНИЯ**\n\n"
+    text = "🏆 ДОСТИЖЕНИЯ\n\n"
 
     unlocked = 0
     total = len(ACHIEVEMENTS)
@@ -28,15 +28,15 @@ async def show_achievements(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if has_ach:
             unlocked += 1
 
-        text += f"{status} {ach['emoji']} **{ach['name']}**\n"
-        text += f"  _{ach['desc']}_\n\n"
+        text += f"{status} {ach['emoji']} {ach['name']}\n"
+        text += f"  {ach['desc']}\n\n"
 
-    text = text[:20] + f"\n🏅 Получено: {unlocked}/{total}\n\n" + text[20:]
+    text = text[:18] + f"\n🏅 Получено: {unlocked}/{total}\n\n" + text[18:]
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="menu")]]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -55,11 +55,11 @@ async def show_daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current_day = (player.daily_streak % 7) + 1
     reward = DAILY_REWARDS[current_day - 1]
 
-    text = f"🎁 **ЕЖЕДНЕВНАЯ НАГРАДА**\n\n"
+    text = f"🎁 ЕЖЕДНЕВНАЯ НАГРАДА\n\n"
     text += f"🔥 Серия: {player.daily_streak} дней\n"
     text += f"📅 День цикла: {current_day}/7\n\n"
 
-    text += "**Награды за 7 дней:**\n"
+    text += "Награды за 7 дней:\n"
     for i, r in enumerate(DAILY_REWARDS, 1):
         marker = "👉" if i == current_day else "  "
         items_text = ", ".join([
@@ -79,12 +79,12 @@ async def show_daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if can_claim:
         keyboard.append([InlineKeyboardButton("🎁 Получить награду", callback_data="claim_daily")])
     else:
-        text += "\n✅ _Награда уже получена сегодня!_"
+        text += "\n✅ Награда уже получена сегодня!"
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -158,19 +158,19 @@ async def rest(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data()
 
-    text = f"""💤 **ОТДЫХ**
+    text = f"""💤 ОТДЫХ
 
 Ты немного отдохнул...
 
 ❤️ HP: +{hp_gained} ({player.hp}/{player.get_max_hp()})
 💙 Мана: +{mana_gained} ({player.mana}/{player.get_max_mana()})
 
-_Посети таверну для полного восстановления!_"""
+Посети таверну для полного восстановления!"""
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="menu")]]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -181,16 +181,16 @@ async def show_titles(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "🏷️ **ТИТУЛЫ**\n\n"
+    text = "🏷️ ТИТУЛЫ\n\n"
 
     if player.title:
         text += f"Текущий: 『{player.title}』\n\n"
 
     if not player.titles:
-        text += "_У тебя пока нет титулов._\n"
-        text += "_Выполняй сюжетные квесты, чтобы получить титулы!_"
+        text += "У тебя пока нет титулов.\n"
+        text += "Выполняй сюжетные квесты, чтобы получить титулы!"
     else:
-        text += "**Доступные титулы:**\n"
+        text += "Доступные титулы:\n"
         for title in player.titles:
             marker = "✅" if title == player.title else "⬜"
             text += f"{marker} {title}\n"
@@ -213,7 +213,7 @@ async def show_titles(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="profile")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 

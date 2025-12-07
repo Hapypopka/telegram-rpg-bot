@@ -315,8 +315,8 @@ async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer(f"Экипировано: {item.get('name', item_id)}")
 
     # Вернуться к списку слота
-    query.data = f"slot_{slot}"
-    await show_slot_items(update, context)
+    context.user_data["slot"] = slot
+    await show_slot_items_direct(query, player, slot)
 
 
 async def unequip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -336,8 +336,74 @@ async def unequip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
 
     # Вернуться к списку слота
-    query.data = f"slot_{slot}"
-    await show_slot_items(update, context)
+    context.user_data["slot"] = slot
+    await show_slot_items_direct(query, player, slot)
+
+
+async def show_slot_items_direct(query, player, slot):
+    """Показать предметы для слота (прямой вызов)"""
+    slot_name = SLOT_NAMES.get(slot, slot)
+    text = f"📦 {slot_name}\n\n"
+
+    # Текущий предмет
+    current_item_id = player.equipment.get(slot)
+    if current_item_id:
+        current_item = ITEMS.get(current_item_id, {})
+        rarity_emoji = RARITY_EMOJI.get(current_item.get("rarity", ""), "")
+        item_name = current_item.get('name', current_item_id)
+        item_emoji = current_item.get('emoji', '📦')
+        text += f"Надето: {rarity_emoji}{item_emoji} {item_name}\n"
+        stats = get_item_stats_text(current_item)
+        if stats:
+            text += f"  {stats}\n"
+    else:
+        text += "Надето: Ничего\n"
+
+    text += "\nДоступно в инвентаре:\n"
+
+    keyboard = []
+    found = False
+
+    for item_id, count in player.inventory.items():
+        if count <= 0:
+            continue
+
+        item = ITEMS.get(item_id, {})
+        item_slot = item.get("slot")
+
+        if item_slot != slot:
+            continue
+
+        found = True
+        rarity = item.get("rarity", "common")
+        rarity_emoji = RARITY_EMOJI.get(rarity, "")
+        name = item.get("name", item_id)
+        emoji = item.get("emoji", "📦")
+        stats = get_item_stats_text(item)
+
+        text += f"\n{rarity_emoji}{emoji} {name} ({count})"
+        if stats:
+            text += f"\n  {stats}"
+
+        keyboard.append([InlineKeyboardButton(
+            f"{rarity_emoji}{emoji} {name}",
+            callback_data=f"equip_{slot}_{item_id}"
+        )])
+
+    if not found:
+        text += "Нет подходящих предметов"
+
+    if current_item_id:
+        keyboard.append([InlineKeyboardButton(
+            "❌ Снять",
+            callback_data=f"unequip_{slot}"
+        )])
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="equipment")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -473,6 +539,46 @@ async def buy_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer(f"Куплено: {item['name']}")
 
 
+async def show_sell_menu(query, player):
+    """Показать меню продажи (прямой вызов)"""
+    text = f"💰 ПРОДАЖА\n\n💰 Золото: {player.gold}\n\n"
+
+    keyboard = []
+
+    for item_id, count in player.inventory.items():
+        if count <= 0:
+            continue
+
+        item = ITEMS.get(item_id, {})
+        price = item.get("price", 0)
+        if price <= 0:
+            continue
+
+        rarity = item.get("rarity", "common")
+        rarity_emoji = RARITY_EMOJI.get(rarity, "")
+        emoji = item.get("emoji", "📦")
+        name = item.get("name", item_id)
+
+        sell_mult = {"common": 0.5, "rare": 0.6, "epic": 0.7, "legendary": 0.8}
+        sell_price = int(price * sell_mult.get(rarity, 0.5))
+
+        text += f"{rarity_emoji}{emoji} {name} ({count}) - {sell_price}💰\n"
+
+        keyboard.append([InlineKeyboardButton(
+            f"Продать {name} ({sell_price}💰)",
+            callback_data=f"sell_{item_id}"
+        )])
+
+    if not keyboard:
+        text += "Нечего продавать"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="inventory")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
 async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Продать предмет"""
     query = update.callback_query
@@ -483,44 +589,7 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Меню продажи
     if data == "sell_menu":
         await query.answer()
-
-        text = f"💰 ПРОДАЖА\n\n💰 Золото: {player.gold}\n\n"
-
-        keyboard = []
-
-        for item_id, count in player.inventory.items():
-            if count <= 0:
-                continue
-
-            item = ITEMS.get(item_id, {})
-            price = item.get("price", 0)
-            if price <= 0:
-                continue
-
-            rarity = item.get("rarity", "common")
-            rarity_emoji = RARITY_EMOJI.get(rarity, "")
-            emoji = item.get("emoji", "📦")
-            name = item.get("name", item_id)
-
-            # Цена продажи зависит от редкости
-            sell_mult = {"common": 0.5, "rare": 0.6, "epic": 0.7, "legendary": 0.8}
-            sell_price = int(price * sell_mult.get(rarity, 0.5))
-
-            text += f"{rarity_emoji}{emoji} {name} ({count}) - {sell_price}💰\n"
-
-            keyboard.append([InlineKeyboardButton(
-                f"Продать {name} ({sell_price}💰)",
-                callback_data=f"sell_{item_id}"
-            )])
-
-        if not keyboard:
-            text += "Нечего продавать"
-
-        keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="inventory")])
-
-        await query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await show_sell_menu(query, player)
         return
 
     # Продажа конкретного предмета
@@ -546,5 +615,4 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer(f"Продано за {sell_price} золота")
 
         # Обновить меню продажи
-        query.data = "sell_menu"
-        await sell_item(update, context)
+        await show_sell_menu(query, player)

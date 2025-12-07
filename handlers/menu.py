@@ -23,10 +23,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not player.name:
         # Запросить никнейм
         await update.message.reply_text(
-            "🏰 **Добро пожаловать в Тени Подземелий!**\n\n"
+            "🏰 Добро пожаловать в Тени Подземелий!\n\n"
             "Как тебя зовут, герой?\n\n"
-            "_Введи своё имя (3-20 символов):_",
-            parse_mode="Markdown"
+            "Введи своё имя (3-20 символов):"
         )
         return WAITING_NAME
     elif not player.player_class:
@@ -59,8 +58,7 @@ async def set_player_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data()
 
     await update.message.reply_text(
-        f"✨ Отлично, **{name}**! Теперь выбери свой класс.",
-        parse_mode="Markdown"
+        f"✨ Отлично, {name}! Теперь выбери свой класс."
     )
 
     await show_class_selection(update, context)
@@ -82,8 +80,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = f"""🏰 **ТЕНИ ПОДЗЕМЕЛИЙ** 🏰
 
-{title_text}**{player.name}**
-{class_emoji} {class_name} | Ур. {player.level}
+{title_text}**{player.name}{class_emoji} {class_name} | Ур. {player.level}
 
 ❤️ HP: [{hp_bar}] {player.hp}/{player.get_max_hp()}
 💙 MP: [{mana_bar}] {player.mana}/{player.get_max_mana()}
@@ -117,26 +114,23 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.callback_query:
         await update.callback_query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-        )
+            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
     else:
         await update.message.reply_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-        )
+            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
 
 
 async def show_class_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать выбор класса"""
-    text = """🎮 **ВЫБОР КЛАССА**
-
+    text = """🎮 ВЫБОР КЛАССА
 Выбери свой путь, герой!
 
 """
     keyboard = []
 
     for class_id, class_data in CLASSES.items():
-        text += f"{class_data['emoji']} **{class_data['name']}**\n"
-        text += f"_{class_data['description']}_\n"
+        text += f"{class_data['emoji']} {class_data['name']}\n"
+        text += f"{class_data['description']}\n"
         text += f"❤️ HP: {class_data['base_hp']} | ⚔️ ATK: {class_data['base_damage']} | 🛡️ DEF: {class_data['base_defense']}\n\n"
 
         keyboard.append([InlineKeyboardButton(
@@ -146,12 +140,10 @@ async def show_class_selection(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if update.callback_query:
         await update.callback_query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-        )
+            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
     else:
         await update.message.reply_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-        )
+            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
 
 
 async def select_class(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -170,11 +162,10 @@ async def select_class(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data()
 
         await query.edit_message_text(
-            f"✨ Ты выбрал класс **{class_data['name']}**!\n\n"
+            f"✨ Ты выбрал класс {class_data['name']}!\n\n"
             f"Твои навыки:\n" +
             "\n".join([f"{s['emoji']} {s['name']} - {s['description']}" for s in class_data['skills'].values()]) +
-            "\n\nДобро пожаловать в мир Теней Подземелий!",
-            parse_mode="Markdown"
+            "\n\nДобро пожаловать в мир Теней Подземелий!"
         )
 
         # Показать меню через секунду
@@ -194,42 +185,30 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_defense = player.get_total_defense()
     total_crit = player.get_crit_chance()
 
-    # Легендарный сет
-    set_pieces = player.count_legendary_pieces()
-    set_bonus_text = ""
-    if set_pieces >= 2:
-        from data import LEGENDARY_SETS
-        if player.player_class in LEGENDARY_SETS:
-            set_data = LEGENDARY_SETS[player.player_class]
-            set_bonus_text = f"\n\n✨ Бонус сета ({set_pieces}/4):\n"
-            set_bonus_text += f"  2 части: {set_data['bonus_2']}\n"
-            if set_pieces >= 4:
-                set_bonus_text += f"  4 части: {set_data['bonus_4']}"
-
     title_text = f"『{player.title}』\n" if player.title else ""
 
-    text = f"""👤 **ПРОФИЛЬ**
+    text = f"""👤 ПРОФИЛЬ
 
-{title_text}**{player.name}**
+{title_text}{player.name}
 {class_data.get('emoji', '')} {class_data.get('name', 'Неизвестно')}
 
-📊 **Статистика:**
+📊 Статистика:
 Уровень: {player.level}
 Опыт: {player.exp}/{player.exp_to_level}
 Золото: {player.gold} 💰
 
-⚔️ **Боевые характеристики:**
+⚔️ Боевые характеристики:
 ❤️ HP: {player.hp}/{player.get_max_hp()}
 💙 Мана: {player.mana}/{player.get_max_mana()}
 ⚔️ Урон: {total_damage}
 🛡️ Защита: {total_defense}
 🎯 Крит: {total_crit}%
 
-📈 **Прогресс:**
+📈 Прогресс:
 Убито врагов: {player.stats.get('kills', 0)}
 Убито боссов: {player.stats.get('boss_kills', 0)}
 Пройдено этажей: {player.stats.get('floors', 0)}
-Квестов выполнено: {player.stats.get('quests_done', 0)}{set_bonus_text}"""
+Квестов выполнено: {player.stats.get('quests_done', 0)}"""
 
     keyboard = [
         [
@@ -244,7 +223,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -265,8 +244,8 @@ async def show_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     player = get_player(query.from_user.id)
     class_data = CLASSES.get(player.player_class, {})
 
-    text = f"✨ **УМЕНИЯ** ({class_data.get('name', '')})\n\n"
-    text += f"📖 Пассивка: _{class_data.get('passive', 'Нет')}_\n\n"
+    text = f"✨ УМЕНИЯ ({class_data.get('name', '')})\n\n"
+    text += f"📖 Пассивка: {class_data.get('passive', 'Нет')}\n\n"
 
     skills = list(class_data.get("skills", {}).items())
 
@@ -278,10 +257,10 @@ async def show_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status = "✅" if is_unlocked else f"🔒 Ур.{req_level}"
         ult_mark = " ⭐УЛЬТА" if is_ultimate else ""
 
-        text += f"{skill['emoji']} **{skill['name']}**{ult_mark} {status}\n"
+        text += f"{skill['emoji']} {skill['name']}{ult_mark} {status}\n"
 
         if is_unlocked:
-            text += f"  _{skill['description']}_\n"
+            text += f"  {skill['description']}\n"
             text += f"  💙 Мана: {skill.get('mana', 0)} | ⏱ КД: {skill.get('cooldown', 0)} ходов\n"
 
             # Детальное описание эффектов
@@ -314,15 +293,14 @@ async def show_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if effects:
                 text += f"  📌 Эффекты: {', '.join(effects)}\n"
         else:
-            text += f"  _Откроется на {req_level} уровне_\n"
+            text += f"  Откроется на {req_level} уровне\n"
 
         text += "\n"
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="profile")]]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
 
 
 async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -332,28 +310,27 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = f"""📊 **СТАТИСТИКА**
+    text = f"""📊 СТАТИСТИКА
 
-⚔️ **Бой:**
+⚔️ Бой:
 Убито врагов: {player.stats.get('kills', 0)}
 Убито боссов: {player.stats.get('boss_kills', 0)}
 Критических ударов: {player.stats.get('crits', 0)}
 Смертей: {player.stats.get('deaths', 0)}
 
-🏰 **Подземелья:**
+🏰 Подземелья:
 Пройдено этажей: {player.stats.get('floors', 0)}
 Максимальный этаж: {player.stats.get('max_floor', 0)}
 
-💰 **Экономика:**
+💰 Экономика:
 Заработано золота: {player.stats.get('gold_earned', 0)}
 Потрачено золота: {player.stats.get('gold_spent', 0)}
 
-📜 **Квесты:**
+📜 Квесты:
 Выполнено квестов: {player.stats.get('quests_done', 0)}
 Ежедневок получено: {player.stats.get('dailies_claimed', 0)}"""
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="profile")]]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
-    )
+        text, reply_markup=InlineKeyboardMarkup(keyboard)    )

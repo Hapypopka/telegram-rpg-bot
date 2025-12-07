@@ -86,6 +86,9 @@ class Player:
             "slot_2": "mana_potion_small"   # По умолчанию Мана зелье
         }
 
+        # Сокеты в экипировке (slot -> socket_id)
+        self.item_sockets = {}
+
     def to_dict(self) -> dict:
         """Сериализация в словарь"""
         return {
@@ -113,7 +116,8 @@ class Player:
             "daily_streak": self.daily_streak,
             "food_buffs": self.food_buffs,
             "mercenary": self.mercenary,
-            "potion_slots": self.potion_slots
+            "potion_slots": self.potion_slots,
+            "item_sockets": self.item_sockets
         }
 
     @classmethod
@@ -188,6 +192,10 @@ class Player:
                 "slot_2": "mana_potion_small"
             }
 
+        # Миграция: добавить сокеты для старых игроков
+        if "item_sockets" not in data:
+            data["item_sockets"] = {}
+
         for key, value in data.items():
             if hasattr(player, key):
                 setattr(player, key, value)
@@ -222,6 +230,41 @@ class Player:
             stats["defense"] += set_bonus.get("defense", 0)
             stats["crit"] += set_bonus.get("crit", 0)
 
+        # Бонус от сокетов
+        stats = self.add_socket_bonuses(stats)
+
+        return stats
+
+    def add_socket_bonuses(self, stats: dict) -> dict:
+        """Добавить бонусы от сокетов"""
+        from data.tavern import SOCKETS
+
+        for slot, socket_id in self.item_sockets.items():
+            if not socket_id:
+                continue
+            # Проверить что в слоте есть предмет
+            if not self.equipment.get(slot):
+                continue
+            socket = SOCKETS.get(socket_id, {})
+            bonus = socket.get("bonus", {})
+            for stat, value in bonus.items():
+                if stat in stats:
+                    stats[stat] += value
+        return stats
+
+    def get_socket_stats(self) -> dict:
+        """Получить суммарные бонусы от всех сокетов"""
+        from data.tavern import SOCKETS
+
+        stats = {"hp": 0, "mana": 0, "damage": 0, "defense": 0, "crit": 0, "dodge": 0, "lifesteal": 0}
+        for slot, socket_id in self.item_sockets.items():
+            if not socket_id or not self.equipment.get(slot):
+                continue
+            socket = SOCKETS.get(socket_id, {})
+            bonus = socket.get("bonus", {})
+            for stat, value in bonus.items():
+                if stat in stats:
+                    stats[stat] += value
         return stats
 
     def get_max_hp(self) -> int:

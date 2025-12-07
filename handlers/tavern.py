@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 
 from data import (
     TAVERN_FOOD, MERCENARIES, BLACKSMITH_UPGRADES, CRAFT_RECIPES,
-    ALCHEMY_RECIPES, QUESTS, ITEMS, SLOT_NAMES, LEGENDARY_CRAFT_RECIPES, RARITY_EMOJI
+    ALCHEMY_RECIPES, QUESTS, ITEMS, SLOT_NAMES, LEGENDARY_CRAFT_RECIPES, RARITY_EMOJI, SOCKETS
 )
 from utils.storage import get_player, save_data
 
@@ -218,6 +218,9 @@ async def show_blacksmith(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("🔧 Улучшения", callback_data="smith_upgrades"),
             InlineKeyboardButton("🔵 Крафт редких", callback_data="smith_craft")
+        ],
+        [
+            InlineKeyboardButton("💎 Сокеты", callback_data="smith_sockets")
         ]
     ]
 
@@ -659,12 +662,12 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "📜 **КВЕСТЫ**\n\n"
+    text = "📜 КВЕСТЫ\n\n"
 
     keyboard = []
 
     # Ежедневные квесты
-    text += "**📅 Ежедневные:**\n"
+    text += "📅 Ежедневные:\n"
     for quest_id, quest in QUESTS.items():
         if quest["type"] != "daily":
             continue
@@ -675,7 +678,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         status = "✅" if completed else f"{progress}/{target}"
         text += f"{quest['emoji']} {quest['name']} - {status}\n"
-        text += f"  _{quest['desc']}_\n"
+        text += f"  {quest['desc']}\n"
 
         if completed and quest_id not in player.completed_quests:
             keyboard.append([InlineKeyboardButton(
@@ -684,7 +687,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
 
     # Еженедельные квесты
-    text += "\n**📆 Еженедельные:**\n"
+    text += "\n📆 Еженедельные:\n"
     for quest_id, quest in QUESTS.items():
         if quest["type"] != "weekly":
             continue
@@ -695,7 +698,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         status = "✅" if completed else f"{progress}/{target}"
         text += f"{quest['emoji']} {quest['name']} - {status}\n"
-        text += f"  _{quest['desc']}_\n"
+        text += f"  {quest['desc']}\n"
 
         if completed and quest_id not in player.completed_quests:
             keyboard.append([InlineKeyboardButton(
@@ -704,18 +707,34 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
 
     # Сюжетные квесты
-    text += "\n**📖 Сюжетные:**\n"
+    text += "\n📖 Сюжетные:\n"
     for quest_id, quest in QUESTS.items():
         if quest["type"] != "story":
             continue
 
         completed = quest_id in player.completed_quests
-        status = "✅" if completed else "❌"
+        # Проверить, получена ли награда (титул выдан)
+        reward_claimed = quest.get("rewards", {}).get("title") in player.titles if quest.get("rewards", {}).get("title") else False
+
+        if reward_claimed:
+            status = "✅"
+        elif completed:
+            status = "🎁"  # Можно забрать награду
+        else:
+            status = "❌"
+
         text += f"{quest['emoji']} {quest['name']} - {status}\n"
-        text += f"  _{quest['desc']}_\n"
+        text += f"  {quest['desc']}\n"
+
+        # Кнопка получения награды если квест выполнен но награда не получена
+        if completed and not reward_claimed:
+            keyboard.append([InlineKeyboardButton(
+                f"🎁 {quest['name']}",
+                callback_data=f"claim_quest_{quest_id}"
+            )])
 
     # Легендарные квесты (только для своего класса)
-    text += "\n**🟠 Легендарные:**\n"
+    text += "\n🟠 Легендарные:\n"
     for quest_id, quest in QUESTS.items():
         if quest["type"] != "legendary":
             continue
@@ -735,7 +754,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status = "🔓 Доступен" if boss_defeated else "🔒 Победи Владыку Хаоса"
 
         text += f"{quest['emoji']} {quest['name']} - {status}\n"
-        text += f"  _{quest['desc']}_\n"
+        text += f"  {quest['desc']}\n"
 
         # Кнопка получения награды если босс побеждён и награда не получена
         if not completed and not has_recipe and "story_chaos" in player.completed_quests:
@@ -772,15 +791,26 @@ async def claim_quest_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if quest.get("class") and quest["class"] != player.player_class:
             await query.answer("Это квест не для твоего класса!", show_alert=True)
             return
+    elif quest["type"] == "story":
+        # Сюжетные квесты - проверяем убит ли босс (квест добавлен в completed_quests при убийстве)
+        if quest_id not in player.completed_quests:
+            await query.answer("Сначала победи босса!", show_alert=True)
+            return
+        # Проверяем, получена ли награда (титул выдан)
+        title = quest.get("rewards", {}).get("title")
+        if title and title in player.titles:
+            await query.answer("Награда уже получена!", show_alert=True)
+            return
     else:
-        # Проверить выполнение для обычных квестов
+        # Проверить выполнение для ежедневных/еженедельных квестов
         progress = player.quest_progress.get(quest_id, 0)
         target = quest["target"]
         if isinstance(target, int) and progress < target:
             await query.answer("Квест не выполнен!", show_alert=True)
             return
 
-    if quest_id in player.completed_quests:
+    # Для НЕ сюжетных квестов проверяем что награда не получена
+    if quest["type"] not in ("story",) and quest_id in player.completed_quests:
         await query.answer("Награда уже получена!", show_alert=True)
         return
 
@@ -808,10 +838,247 @@ async def claim_quest_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.titles.append(rewards["title"])
         reward_text.append(f"🏷️ Титул: {rewards['title']}")
 
-    player.completed_quests.append(quest_id)
+    # Добавить в completed_quests только если ещё нет (для сюжетных уже добавлено при убийстве босса)
+    if quest_id not in player.completed_quests:
+        player.completed_quests.append(quest_id)
     player.stats["quests_done"] = player.stats.get("quests_done", 0) + 1
 
     save_data()
     await query.answer(f"Награда: {', '.join(reward_text)}")
 
     await show_quests(update, context)
+
+
+# =====================
+# СОКЕТЫ
+# =====================
+
+async def show_socket_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать меню сокетов"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    text = f"""💎 СОКЕТЫ
+
+💰 Золото: {player.gold:,}
+
+Вставь сокет в экипировку для бонусов.
+Каждый слот экипировки может иметь 1 сокет.
+Сокет можно заменить (старый будет потерян).
+
+Выбери слот экипировки:"""
+
+    keyboard = []
+
+    # Показать слоты с текущими сокетами
+    slot_emojis = {
+        "weapon": "🗡️", "helmet": "⛑️", "shoulders": "🦺",
+        "chest": "🎽", "belt": "🎗️", "gloves": "🧤",
+        "leggings": "👖", "boots": "👢", "ring": "💍", "necklace": "📿"
+    }
+
+    for slot, slot_name in SLOT_NAMES.items():
+        item_id = player.equipment.get(slot)
+        socket_id = player.item_sockets.get(slot)
+        emoji = slot_emojis.get(slot, "📦")
+
+        if item_id:
+            item = ITEMS.get(item_id, {})
+            item_name = item.get("name", item_id)[:15]
+
+            if socket_id:
+                socket = SOCKETS.get(socket_id, {})
+                socket_emoji = socket.get("emoji", "💎")
+                btn_text = f"{emoji} {item_name} [{socket_emoji}]"
+            else:
+                btn_text = f"{emoji} {item_name} [пусто]"
+
+            keyboard.append([InlineKeyboardButton(
+                btn_text,
+                callback_data=f"socket_slot_{slot}"
+            )])
+
+    if not keyboard:
+        text += "\n\nНет экипировки для вставки сокетов!"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def show_socket_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать выбор сокета для слота"""
+    query = update.callback_query
+    await query.answer()
+
+    slot = query.data.replace("socket_slot_", "")
+    player = get_player(query.from_user.id)
+
+    item_id = player.equipment.get(slot)
+    if not item_id:
+        await query.answer("Слот пуст!", show_alert=True)
+        return
+
+    item = ITEMS.get(item_id, {})
+    item_name = item.get("name", item_id)
+    current_socket_id = player.item_sockets.get(slot)
+
+    text = f"💎 СОКЕТ ДЛЯ: {item_name}\n"
+    text += f"💰 Золото: {player.gold:,}\n\n"
+
+    if current_socket_id:
+        current_socket = SOCKETS.get(current_socket_id, {})
+        text += f"Текущий сокет: {current_socket.get('emoji', '')} {current_socket.get('name', '')}\n"
+        text += f"  {current_socket.get('desc', '')}\n\n"
+    else:
+        text += "Текущий сокет: Пусто\n\n"
+
+    text += "Доступные сокеты:\n\n"
+
+    keyboard = []
+
+    # Группировать по тирам
+    tiers = {1: "Малые (10,000💰)", 2: "Средние (30,000💰)", 3: "Большие (60,000💰)", 4: "Эпические (100,000💰)"}
+
+    for tier, tier_name in tiers.items():
+        tier_sockets = [(sid, s) for sid, s in SOCKETS.items() if s.get("tier") == tier]
+
+        if tier_sockets:
+            text += f"--- {tier_name} ---\n"
+            for socket_id, socket in tier_sockets:
+                can_afford = player.gold >= socket["price"]
+                status = "✅" if can_afford else "❌"
+                text += f"{socket['emoji']} {socket['name']} - {socket['price']:,}💰 {status}\n"
+                text += f"   {socket['desc']}\n"
+
+                if can_afford:
+                    keyboard.append([InlineKeyboardButton(
+                        f"{socket['emoji']} {socket['name']} ({socket['price']:,}💰)",
+                        callback_data=f"insert_socket_{slot}_{socket_id}"
+                    )])
+            text += "\n"
+
+    # Удалить сокет
+    if current_socket_id:
+        keyboard.append([InlineKeyboardButton("❌ Удалить сокет", callback_data=f"remove_socket_{slot}")])
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="smith_sockets")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def insert_socket(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Вставить сокет в слот"""
+    query = update.callback_query
+
+    # Формат: insert_socket_SLOT_SOCKETID
+    parts = query.data.split("_", 3)
+    if len(parts) < 4:
+        await query.answer()
+        return
+
+    slot = parts[2]
+    socket_id = parts[3]
+
+    player = get_player(query.from_user.id)
+
+    # Проверки
+    if not player.equipment.get(slot):
+        await query.answer("Слот пуст!", show_alert=True)
+        return
+
+    if socket_id not in SOCKETS:
+        await query.answer("Сокет не найден!", show_alert=True)
+        return
+
+    socket = SOCKETS[socket_id]
+    price = socket["price"]
+
+    if player.gold < price:
+        await query.answer("Недостаточно золота!", show_alert=True)
+        return
+
+    # Вставить сокет
+    player.gold -= price
+    player.stats["gold_spent"] = player.stats.get("gold_spent", 0) + price
+    player.item_sockets[slot] = socket_id
+
+    save_data()
+    await query.answer(f"Вставлен: {socket['name']}!")
+
+    # Вернуться к меню сокетов
+    await show_socket_menu_direct(query, player)
+
+
+async def remove_socket(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Удалить сокет из слота"""
+    query = update.callback_query
+
+    slot = query.data.replace("remove_socket_", "")
+    player = get_player(query.from_user.id)
+
+    if slot in player.item_sockets:
+        del player.item_sockets[slot]
+        save_data()
+        await query.answer("Сокет удалён")
+    else:
+        await query.answer("Нет сокета для удаления")
+
+    await show_socket_menu_direct(query, player)
+
+
+async def show_socket_menu_direct(query, player):
+    """Показать меню сокетов (прямой вызов)"""
+    text = f"""💎 СОКЕТЫ
+
+💰 Золото: {player.gold:,}
+
+Вставь сокет в экипировку для бонусов.
+Каждый слот экипировки может иметь 1 сокет.
+Сокет можно заменить (старый будет потерян).
+
+Выбери слот экипировки:"""
+
+    keyboard = []
+
+    slot_emojis = {
+        "weapon": "🗡️", "helmet": "⛑️", "shoulders": "🦺",
+        "chest": "🎽", "belt": "🎗️", "gloves": "🧤",
+        "leggings": "👖", "boots": "👢", "ring": "💍", "necklace": "📿"
+    }
+
+    for slot, slot_name in SLOT_NAMES.items():
+        item_id = player.equipment.get(slot)
+        socket_id = player.item_sockets.get(slot)
+        emoji = slot_emojis.get(slot, "📦")
+
+        if item_id:
+            item = ITEMS.get(item_id, {})
+            item_name = item.get("name", item_id)[:15]
+
+            if socket_id:
+                socket = SOCKETS.get(socket_id, {})
+                socket_emoji = socket.get("emoji", "💎")
+                btn_text = f"{emoji} {item_name} [{socket_emoji}]"
+            else:
+                btn_text = f"{emoji} {item_name} [пусто]"
+
+            keyboard.append([InlineKeyboardButton(
+                btn_text,
+                callback_data=f"socket_slot_{slot}"
+            )])
+
+    if not keyboard:
+        text += "\n\nНет экипировки для вставки сокетов!"
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="tavern_smith")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )

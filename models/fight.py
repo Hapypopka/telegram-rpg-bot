@@ -68,7 +68,7 @@ class Fight:
             self.enemy_max_hp = self.enemy_hp
             self.enemy_damage = int(self.dungeon["boss_damage"] * (1 + floor * 0.03))
             self.exp_reward = int(100 * self.dungeon["exp_mult"] * (1 + floor * 0.1))
-            self.gold_reward = int(150 * self.dungeon["gold_mult"] * (1 + floor * 0.1))
+            self.gold_reward = int(15 * self.dungeon["gold_mult"] * (1 + floor * 0.1))  # Уменьшено в 10 раз
         else:
             enemy_id = random.choice(self.dungeon["enemies"])
             enemy = ENEMIES[enemy_id]
@@ -79,7 +79,7 @@ class Fight:
             self.enemy_max_hp = self.enemy_hp
             self.enemy_damage = int(enemy["damage"] * (1 + floor * 0.05))
             self.exp_reward = int(enemy["exp"] * self.dungeon["exp_mult"])
-            self.gold_reward = int(enemy["gold"] * self.dungeon["gold_mult"])
+            self.gold_reward = int(enemy["gold"] * self.dungeon["gold_mult"] * 0.1)  # Уменьшено в 10 раз
             self.enemy_special = {k: v for k, v in enemy.items() if k in ["poison", "burn", "lifesteal"]}
 
         # Состояния боя

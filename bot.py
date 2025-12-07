@@ -26,7 +26,8 @@ from handlers.tavern import (
     show_craft_category, craft_rare_item, blacksmith_upgrade,
     show_legendary_craft, craft_legendary,
     show_alchemist, craft_potion,
-    show_quests, claim_quest_reward
+    show_quests, claim_quest_reward,
+    show_socket_menu, show_socket_choice, insert_socket, remove_socket
 )
 from handlers.inventory import (
     show_inventory, show_equipment, show_slot_items, equip_item, unequip_item,
@@ -104,6 +105,12 @@ def main():
     # Алхимик
     app.add_handler(CallbackQueryHandler(show_alchemist, pattern="^tavern_alchemy$"))
     app.add_handler(CallbackQueryHandler(craft_potion, pattern="^craft_potion_"))
+
+    # Сокеты
+    app.add_handler(CallbackQueryHandler(show_socket_menu, pattern="^smith_sockets$"))
+    app.add_handler(CallbackQueryHandler(show_socket_choice, pattern="^socket_slot_"))
+    app.add_handler(CallbackQueryHandler(insert_socket, pattern="^insert_socket_"))
+    app.add_handler(CallbackQueryHandler(remove_socket, pattern="^remove_socket_"))
 
     # Квесты
     app.add_handler(CallbackQueryHandler(show_quests, pattern="^quests$"))

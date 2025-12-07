@@ -556,6 +556,18 @@ async def end_fight(query, fight, player, victory: bool):
         if fight.is_boss:
             player.stats["boss_kills"] = player.stats.get("boss_kills", 0) + 1
 
+            # Завершить сюжетный квест для этого босса
+            boss_to_quest = {
+                "forest": "story_forest",
+                "mines": "story_mines",
+                "crypt": "story_crypt",
+                "abyss": "story_abyss",
+                "chaos": "story_chaos"
+            }
+            quest_id = boss_to_quest.get(fight.dungeon_id)
+            if quest_id and quest_id not in player.completed_quests:
+                player.completed_quests.append(quest_id)
+
         # Дроп ресурса
         dungeon = DUNGEONS[fight.dungeon_id]
         resource = dungeon.get("drop_resource")

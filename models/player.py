@@ -318,3 +318,80 @@ class Player:
             if item_id:
                 count += 1
         return count
+
+    def update_quest_progress(self):
+        """Обновить прогресс квестов на основе статистики"""
+        from data import QUESTS
+
+        for quest_id, quest in QUESTS.items():
+            if quest["type"] in ("daily", "weekly"):
+                stat_key = quest.get("stat")
+                if stat_key and stat_key in self.stats:
+                    self.quest_progress[quest_id] = self.stats[stat_key]
+
+    def check_achievements(self):
+        """Проверить и выдать достижения"""
+        from data import ACHIEVEMENTS
+
+        new_achievements = []
+
+        # Первая кровь
+        if "first_blood" not in self.achievements and self.stats.get("kills", 0) >= 1:
+            self.achievements.append("first_blood")
+            new_achievements.append(ACHIEVEMENTS["first_blood"])
+
+        # Убийства
+        if "slayer_100" not in self.achievements and self.stats.get("kills", 0) >= 100:
+            self.achievements.append("slayer_100")
+            new_achievements.append(ACHIEVEMENTS["slayer_100"])
+
+        if "slayer_1000" not in self.achievements and self.stats.get("kills", 0) >= 1000:
+            self.achievements.append("slayer_1000")
+            new_achievements.append(ACHIEVEMENTS["slayer_1000"])
+
+        # Боссы
+        if "boss_hunter" not in self.achievements and self.stats.get("boss_kills", 0) >= 5:
+            self.achievements.append("boss_hunter")
+            new_achievements.append(ACHIEVEMENTS["boss_hunter"])
+
+        if "boss_slayer" not in self.achievements and self.stats.get("boss_kills", 0) >= 20:
+            self.achievements.append("boss_slayer")
+            new_achievements.append(ACHIEVEMENTS["boss_slayer"])
+
+        # Уровень
+        if "veteran" not in self.achievements and self.level >= 10:
+            self.achievements.append("veteran")
+            new_achievements.append(ACHIEVEMENTS["veteran"])
+
+        if "master" not in self.achievements and self.level >= 20:
+            self.achievements.append("master")
+            new_achievements.append(ACHIEVEMENTS["master"])
+
+        if "grandmaster" not in self.achievements and self.level >= 30:
+            self.achievements.append("grandmaster")
+            new_achievements.append(ACHIEVEMENTS["grandmaster"])
+
+        # Золото
+        if "rich" not in self.achievements and self.gold >= 1000:
+            self.achievements.append("rich")
+            new_achievements.append(ACHIEVEMENTS["rich"])
+
+        if "wealthy" not in self.achievements and self.gold >= 10000:
+            self.achievements.append("wealthy")
+            new_achievements.append(ACHIEVEMENTS["wealthy"])
+
+        if "magnate" not in self.achievements and self.gold >= 100000:
+            self.achievements.append("magnate")
+            new_achievements.append(ACHIEVEMENTS["magnate"])
+
+        # Квесты
+        if "quester" not in self.achievements and self.stats.get("quests_done", 0) >= 50:
+            self.achievements.append("quester")
+            new_achievements.append(ACHIEVEMENTS["quester"])
+
+        # Легендарный сет
+        if "legend" not in self.achievements and self.count_legendary_pieces() >= 4:
+            self.achievements.append("legend")
+            new_achievements.append(ACHIEVEMENTS["legend"])
+
+        return new_achievements

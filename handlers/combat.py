@@ -43,12 +43,6 @@ async def fight_attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
         damage = base_damage
         fight.fight_log.append(f"⚔️ Атака! -{damage} HP")
 
-    # Первая атака для сета Убийцы
-    if fight.first_attack and player.count_legendary_pieces() >= 2:
-        from data import LEGENDARY_SETS
-        if player.player_class == "rogue":
-            damage *= 3
-            fight.fight_log.append("🗡️ Первый удар x3!")
     fight.first_attack = False
 
     # Нанести урон
@@ -211,9 +205,6 @@ async def fight_skill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Лечение
     if "heal" in skill:
         heal = skill["heal"]
-        # Бонус паладина
-        if player.player_class == "paladin" and player.count_legendary_pieces() >= 2:
-            heal = int(heal * 1.3)
         fight.player_hp = min(fight.player_hp + heal, fight.player_max_hp)
         fight.fight_log.append(f"💚 +{heal} HP")
 
@@ -453,15 +444,6 @@ async def process_enemy_attack(query, fight, player):
 
     # Проверить смерть игрока
     if fight.player_hp <= 0:
-        # Бонус паладина - воскрешение
-        if player.player_class == "paladin" and player.count_legendary_pieces() >= 4:
-            if not hasattr(fight, 'resurrected') or not fight.resurrected:
-                fight.resurrected = True
-                fight.player_hp = int(fight.player_max_hp * 0.3)
-                fight.fight_log.append("✨ Воскрешение! 30% HP")
-                await update_fight_ui(query, fight, player)
-                return
-
         await end_fight(query, fight, player, victory=False)
         return
 
@@ -517,13 +499,24 @@ async def end_fight(query, fight, player, victory: bool):
 
         player.stats["floors"] = player.stats.get("floors", 0) + 1
 
+        # Обновить прогресс квестов и проверить достижения
+        player.update_quest_progress()
+        new_achievements = player.check_achievements()
+
+        # Текст о новых достижениях
+        achievement_text = ""
+        if new_achievements:
+            achievement_text = "\n\n🏆 **НОВЫЕ ДОСТИЖЕНИЯ:**\n"
+            for ach in new_achievements:
+                achievement_text += f"{ach['emoji']} {ach['name']}\n"
+
         text = f"""🎉 **ПОБЕДА!**
 
 {fight.enemy_emoji} {fight.enemy_name} повержен!
 
 💰 Золото: +{gold_gained}
 ⭐ Опыт: +{exp_gained}
-📦 {resource}: +{resource_amount}{level_up_text}"""
+📦 {resource}: +{resource_amount}{level_up_text}{achievement_text}"""
 
         # Кнопки
         if fight.is_boss:

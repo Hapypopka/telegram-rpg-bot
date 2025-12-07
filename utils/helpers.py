@@ -36,19 +36,20 @@ def get_fight_keyboard(fight, player) -> InlineKeyboardMarkup:
     ]
     buttons.append(row1)
 
-    # Скиллы класса
+    # Скиллы класса (только открытые)
     if player.player_class:
         class_data = CLASSES[player.player_class]
         skills = class_data.get("skills", {})
         skill_row = []
         for i, (skill_id, skill) in enumerate(skills.items()):
             req_level = SKILL_LEVELS.get(i, 1)
-            is_locked = player.level < req_level
-            cd = fight.cooldowns.get(skill_id, 0)
 
-            if is_locked:
-                btn_text = f"🔒 Ур.{req_level}"
-            elif cd > 0:
+            # Пропускаем заблокированные умения
+            if player.level < req_level:
+                continue
+
+            cd = fight.cooldowns.get(skill_id, 0)
+            if cd > 0:
                 btn_text = f"{skill['emoji']} ({cd})"
             else:
                 btn_text = f"{skill['emoji']} {skill['name']}"

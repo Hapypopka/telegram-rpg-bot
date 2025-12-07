@@ -208,7 +208,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     player = get_player(query.from_user.id)
 
     slot_name = SLOT_NAMES.get(slot, slot)
-    text = f"**{slot_name}**\n\n"
+    text = f"📦 {slot_name}\n\n"
 
     # Текущий предмет
     current_item_id = player.equipment.get(slot)
@@ -224,7 +224,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         text += "Надето: Ничего\n"
 
-    text += "\n**Доступно в инвентаре:**\n"
+    text += "\nДоступно в инвентаре:\n"
 
     keyboard = []
     found = False
@@ -248,11 +248,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
         stats = get_item_stats_text(item)
         rarity_name = get_rarity_name(rarity)
 
-        # Escape markdown special chars in name
-        safe_name = name.replace("*", "").replace("_", "").replace("`", "")
-        text += f"\n{rarity_emoji}{emoji} {safe_name} ({count})"
-        if rarity_name:
-            text += f" [{rarity_name}]"
+        text += f"\n{rarity_emoji}{emoji} {name} ({count})"
         if stats:
             text += f"\n  {stats}"
 
@@ -262,7 +258,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )])
 
     if not found:
-        text += "_Нет подходящих предметов_"
+        text += "Нет подходящих предметов"
 
     # Кнопка снять
     if current_item_id:
@@ -274,7 +270,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="equipment")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 

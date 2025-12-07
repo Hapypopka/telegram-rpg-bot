@@ -9,6 +9,36 @@ from data import ITEMS, LEGENDARY_SETS, CLASSES
 from utils.storage import get_player, save_data
 
 
+def get_item_stats_text(item: dict) -> str:
+    """Получить текст бонусов предмета"""
+    stats = []
+    if "damage" in item:
+        stats.append(f"⚔️+{item['damage']}")
+    if "damage_bonus" in item:
+        stats.append(f"⚔️+{item['damage_bonus']}")
+    if "defense" in item:
+        stats.append(f"🛡️+{item['defense']}")
+    if "defense_bonus" in item:
+        stats.append(f"🛡️+{item['defense_bonus']}")
+    if "hp_bonus" in item:
+        stats.append(f"❤️+{item['hp_bonus']}")
+    if "mana_bonus" in item:
+        stats.append(f"💙+{item['mana_bonus']}")
+    if "crit_bonus" in item:
+        stats.append(f"🎯+{item['crit_bonus']}%")
+    if "dodge_bonus" in item:
+        stats.append(f"💨+{item['dodge_bonus']}%")
+    if "lifesteal" in item:
+        stats.append(f"🩸{int(item['lifesteal']*100)}%")
+    if item.get("berserker"):
+        stats.append("🔥берсерк")
+    if "heal" in item:
+        stats.append(f"❤️+{item['heal']}")
+    if "mana" in item:
+        stats.append(f"💙+{item['mana']}")
+    return " ".join(stats)
+
+
 async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать инвентарь"""
     query = update.callback_query
@@ -87,7 +117,8 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     accessory_text = "Пусто"
     if accessory:
         item = ITEMS.get(accessory, {})
-        accessory_text = f"{item.get('emoji', '')} {item.get('name', accessory)}"
+        acc_stats = get_item_stats_text(item)
+        accessory_text = f"{item.get('emoji', '')} {item.get('name', accessory)}\n   {acc_stats}"
 
     # Легендарное снаряжение
     legendary_text = ""
@@ -206,17 +237,11 @@ async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = item.get("name", item_id)
         emoji = item.get("emoji", "📦")
 
-        stats = []
-        if "damage" in item:
-            stats.append(f"⚔️{item['damage']}")
-        if "defense" in item:
-            stats.append(f"🛡️{item['defense']}")
-        if "crit_bonus" in item:
-            stats.append(f"🎯{item['crit_bonus']}%")
+        stats_text = get_item_stats_text(item)
 
-        stats_text = " ".join(stats) if stats else ""
-
-        text += f"{emoji} {name} ({count}) {stats_text}\n"
+        text += f"{emoji} **{name}** ({count})\n"
+        if stats_text:
+            text += f"   {stats_text}\n"
 
         keyboard.append([InlineKeyboardButton(
             f"{emoji} {name}",
@@ -372,19 +397,11 @@ async def buy_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
             name = item.get("name", item_id)
             price = item["price"]
 
-            stats = []
-            if "damage" in item:
-                stats.append(f"⚔️{item['damage']}")
-            if "defense" in item:
-                stats.append(f"🛡️{item['defense']}")
-            if "heal" in item:
-                stats.append(f"❤️{item['heal']}")
-            if "mana" in item:
-                stats.append(f"💙{item['mana']}")
+            stats_text = get_item_stats_text(item)
 
-            stats_text = " ".join(stats) if stats else ""
-
-            text += f"{emoji} {name} - {price}💰 {stats_text}\n"
+            text += f"{emoji} **{name}** - {price}💰\n"
+            if stats_text:
+                text += f"   {stats_text}\n"
 
             keyboard.append([InlineKeyboardButton(
                 f"{emoji} {name} ({price}💰)",

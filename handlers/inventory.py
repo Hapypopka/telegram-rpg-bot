@@ -215,12 +215,14 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if current_item_id:
         current_item = ITEMS.get(current_item_id, {})
         rarity_emoji = RARITY_EMOJI.get(current_item.get("rarity", ""), "")
-        text += f"Надето: {rarity_emoji}{current_item.get('emoji', '')} {current_item.get('name', current_item_id)}\n"
+        item_name = current_item.get('name', current_item_id)
+        item_emoji = current_item.get('emoji', '📦')
+        text += f"Надето: {rarity_emoji}{item_emoji} {item_name}\n"
         stats = get_item_stats_text(current_item)
         if stats:
             text += f"  {stats}\n"
     else:
-        text += "Надето: _Ничего_\n"
+        text += "Надето: Ничего\n"
 
     text += "\n**Доступно в инвентаре:**\n"
 
@@ -246,7 +248,9 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
         stats = get_item_stats_text(item)
         rarity_name = get_rarity_name(rarity)
 
-        text += f"\n{rarity_emoji}{emoji} **{name}** ({count})"
+        # Escape markdown special chars in name
+        safe_name = name.replace("*", "").replace("_", "").replace("`", "")
+        text += f"\n{rarity_emoji}{emoji} {safe_name} ({count})"
         if rarity_name:
             text += f" [{rarity_name}]"
         if stats:

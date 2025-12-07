@@ -246,6 +246,11 @@ ITEMS = {
         "name": "Кольчуга", "type": "armor", "slot": "chest",
         "emoji": "⛓️", "defense": 10, "price": 180, "rarity": "common"
     },
+    # --- LEGACY (старые предметы для совместимости) ---
+    "firearmor": {
+        "name": "Огненная броня", "type": "armor", "slot": "chest",
+        "emoji": "🔥", "defense": 15, "hp_bonus": 25, "price": 400, "rarity": "rare"
+    },
 
     # --- RARE ---
     "plate_armor": {
@@ -416,6 +421,11 @@ ITEMS = {
     "iron_ring": {
         "name": "Железное кольцо", "type": "accessory", "slot": "ring",
         "emoji": "💍", "damage_bonus": 5, "price": 80, "rarity": "common"
+    },
+    # --- LEGACY (старые предметы для совместимости) ---
+    "berserkercharm": {
+        "name": "Амулет берсерка", "type": "accessory", "slot": "ring",
+        "emoji": "💢", "damage_bonus": 10, "berserker": True, "price": 350, "rarity": "rare"
     },
 
     # --- RARE ---

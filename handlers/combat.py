@@ -570,7 +570,7 @@ async def end_fight(query, fight, player, victory: bool):
         # Текст о новых достижениях
         achievement_text = ""
         if new_achievements:
-            achievement_text = "\n\n🏆 **НОВЫЕ ДОСТИЖЕНИЯ:**\n"
+            achievement_text = "\n\n🏆 НОВЫЕ ДОСТИЖЕНИЯ:\n"
             for ach in new_achievements:
                 achievement_text += f"{ach['emoji']} {ach['name']}\n"
 
@@ -579,7 +579,7 @@ async def end_fight(query, fight, player, victory: bool):
         if rare_drop:
             item_data = ITEMS.get(rare_drop, {})
             rare_emoji = RARITY_EMOJI.get(item_data.get("rarity", "common"), "")
-            rare_drop_text = f"\n{rare_emoji} **РЕДКИЙ ДРОП:** {item_data.get('name', rare_drop)}!"
+            rare_drop_text = f"\n{rare_emoji} РЕДКИЙ ДРОП: {item_data.get('name', rare_drop)}!"
 
         # Текст о эпическом дропе с босса
         epic_drop_text = ""
@@ -589,14 +589,14 @@ async def end_fight(query, fight, player, victory: bool):
             set_name = ""
             if set_id and set_id in EPIC_SETS:
                 set_name = f" (сет: {EPIC_SETS[set_id]['name']})"
-            epic_drop_text = f"\n🟣 **ЭПИЧЕСКИЙ ДРОП:** {item_data.get('name', epic_drop)}!{set_name}"
+            epic_drop_text = f"\n🟣 ЭПИЧЕСКИЙ ДРОП: {item_data.get('name', epic_drop)}!{set_name}"
 
         # Текст о дропе чешуи дракона
         dragon_text = ""
         if fight.is_boss and dragon_scale_drop > 0:
             dragon_text = f"\n🐉 Чешуя дракона: +{dragon_scale_drop}"
 
-        text = f"""🎉 **ПОБЕДА!**
+        text = f"""🎉 ПОБЕДА!
 
 {fight.enemy_emoji} {fight.enemy_name} повержен!
 
@@ -610,7 +610,7 @@ async def end_fight(query, fight, player, victory: bool):
             player.current_dungeon = None
             player.current_floor = 0
 
-            text += "\n\n👑 **Подземелье пройдено!**"
+            text += "\n\n👑 Подземелье пройдено!"
             keyboard = [[InlineKeyboardButton("🏠 В меню", callback_data="menu")]]
         else:
             # Продолжить или выйти
@@ -627,7 +627,7 @@ async def end_fight(query, fight, player, victory: bool):
         player.current_dungeon = None
         player.current_floor = 0
 
-        text = f"""💀 **ПОРАЖЕНИЕ**
+        text = f"""💀 ПОРАЖЕНИЕ
 
 {fight.enemy_emoji} {fight.enemy_name} победил тебя...
 
@@ -639,5 +639,5 @@ async def end_fight(query, fight, player, victory: bool):
     save_data()
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )

@@ -22,7 +22,7 @@ async def show_dungeons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     player = get_player(query.from_user.id)
 
-    text = "🏰 **ПОДЗЕМЕЛЬЯ**\n\nВыбери подземелье для исследования:\n\n"
+    text = "🏰 ПОДЗЕМЕЛЬЯ\n\nВыбери подземелье для исследования:\n\n"
 
     keyboard = []
 
@@ -30,7 +30,7 @@ async def show_dungeons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         locked = player.level < dungeon["min_level"]
         status = "🔒" if locked else "✅"
 
-        text += f"{dungeon['emoji']} **{dungeon['name']}**\n"
+        text += f"{dungeon['emoji']} {dungeon['name']}\n"
         text += f"  Уровень: {dungeon['min_level']}+ | Этажей: {dungeon['floors']}\n"
         text += f"  Босс: {dungeon['boss_emoji']} {dungeon['boss']}\n"
         text += f"  ⚙️ {dungeon['mechanic_desc']}\n\n"
@@ -44,7 +44,7 @@ async def show_dungeons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -67,18 +67,18 @@ async def select_dungeon(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Показать информацию о подземелье
-    text = f"""{dungeon['emoji']} **{dungeon['name']}**
+    text = f"""{dungeon['emoji']} {dungeon['name']}
 
 📜 {dungeon['description']}
 
-📊 **Характеристики:**
+📊 Характеристики:
 Этажей: {dungeon['floors']}
 Босс: {dungeon['boss_emoji']} {dungeon['boss']}
 
-⚙️ **Особая механика:**
+⚙️ Особая механика:
 {dungeon['mechanic_desc']}
 
-💰 **Награды:**
+💰 Награды:
 Опыт: x{dungeon['exp_mult']}
 Золото: x{dungeon['gold_mult']}
 Ресурс: {dungeon['drop_resource']}
@@ -91,7 +91,7 @@ async def select_dungeon(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 

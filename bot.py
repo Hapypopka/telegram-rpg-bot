@@ -3,7 +3,7 @@
 Главный файл запуска
 """
 
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
 
 from config import BOT_TOKEN
 from utils.storage import load_data, save_data
@@ -11,7 +11,7 @@ from utils.storage import load_data, save_data
 # Импорт обработчиков
 from handlers.menu import (
     start, main_menu, show_class_selection, select_class,
-    show_profile, show_stats
+    show_profile, show_stats, show_skills, set_player_name, WAITING_NAME
 )
 from handlers.combat import (
     fight_attack, fight_block, fight_skill, fight_potion, fight_flee
@@ -46,8 +46,16 @@ def main():
     # Создать приложение
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # === Команды ===
-    app.add_handler(CommandHandler("start", start))
+    # === ConversationHandler для регистрации ===
+    registration_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            WAITING_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_player_name)]
+        },
+        fallbacks=[CommandHandler("start", start)],
+        allow_reentry=True
+    )
+    app.add_handler(registration_handler)
 
     # === Callback handlers ===
 
@@ -57,6 +65,7 @@ def main():
     app.add_handler(CallbackQueryHandler(select_class, pattern="^select_class_"))
     app.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
     app.add_handler(CallbackQueryHandler(show_stats, pattern="^stats$"))
+    app.add_handler(CallbackQueryHandler(show_skills, pattern="^skills$"))
 
     # Подземелья
     app.add_handler(CallbackQueryHandler(show_dungeons, pattern="^dungeons$"))

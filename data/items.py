@@ -43,10 +43,80 @@ ITEMS = {
     "shadow_cloak": {"name": "Плащ теней", "type": "armor", "emoji": "🌑", "defense": 20, "dodge_bonus": 10, "price": 900, "rarity": "rare"},
 
     # Аксессуары
-    "lucky_ring": {"name": "Кольцо удачи", "type": "accessory", "emoji": "💍", "crit_bonus": 10, "price": 400, "rarity": "uncommon"},
-    "power_amulet": {"name": "Амулет силы", "type": "accessory", "emoji": "📿", "damage_bonus": 10, "price": 500, "rarity": "uncommon"},
-    "shield_charm": {"name": "Защитный оберег", "type": "accessory", "emoji": "🔮", "defense_bonus": 8, "price": 450, "rarity": "uncommon"},
-    "life_pendant": {"name": "Кулон жизни", "type": "accessory", "emoji": "💚", "hp_bonus": 50, "price": 600, "rarity": "rare"},
+    "lucky_ring": {
+        "name": "Кольцо удачи",
+        "type": "accessory",
+        "emoji": "💍",
+        "description": "Древнее кольцо, приносящее удачу в бою",
+        "crit_bonus": 10,
+        "price": 400,
+        "rarity": "uncommon"
+    },
+    "power_amulet": {
+        "name": "Амулет силы",
+        "type": "accessory",
+        "emoji": "📿",
+        "description": "Наполняет владельца грубой силой",
+        "damage_bonus": 10,
+        "price": 500,
+        "rarity": "uncommon"
+    },
+    "shield_charm": {
+        "name": "Защитный оберег",
+        "type": "accessory",
+        "emoji": "🔮",
+        "description": "Создаёт невидимый щит вокруг носителя",
+        "defense_bonus": 8,
+        "price": 450,
+        "rarity": "uncommon"
+    },
+    "life_pendant": {
+        "name": "Кулон жизни",
+        "type": "accessory",
+        "emoji": "💚",
+        "description": "Пульсирует жизненной энергией",
+        "hp_bonus": 50,
+        "price": 600,
+        "rarity": "rare"
+    },
+    "vampire_ring": {
+        "name": "Кольцо вампира",
+        "type": "accessory",
+        "emoji": "🩸",
+        "description": "Крадёт жизнь у врагов с каждым ударом",
+        "lifesteal": 0.08,
+        "price": 800,
+        "rarity": "rare"
+    },
+    "mana_crystal": {
+        "name": "Кристалл маны",
+        "type": "accessory",
+        "emoji": "💎",
+        "description": "Увеличивает запас магической энергии",
+        "mana_bonus": 40,
+        "price": 550,
+        "rarity": "uncommon"
+    },
+    "berserker_charm": {
+        "name": "Оберег берсерка",
+        "type": "accessory",
+        "emoji": "🔥",
+        "description": "Чем меньше HP, тем больше урона",
+        "damage_bonus": 5,
+        "berserker": True,
+        "price": 700,
+        "rarity": "rare"
+    },
+    "shadow_medallion": {
+        "name": "Медальон теней",
+        "type": "accessory",
+        "emoji": "🌑",
+        "description": "Позволяет уклоняться от атак",
+        "dodge_bonus": 12,
+        "crit_bonus": 5,
+        "price": 900,
+        "rarity": "rare"
+    },
 }
 
 LEGENDARY_SETS = {

@@ -94,6 +94,10 @@ async def fight_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await process_enemy_attack(query, fight, player)
 
 
+# Уровни открытия умений
+SKILL_LEVELS = {0: 1, 1: 3, 2: 6, 3: 10}
+
+
 async def fight_skill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Использовать скилл"""
     query = update.callback_query
@@ -118,6 +122,15 @@ async def fight_skill(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     skill = skills[skill_id]
+
+    # Проверить уровень для открытия умения
+    skill_list = list(skills.keys())
+    skill_index = skill_list.index(skill_id) if skill_id in skill_list else 0
+    req_level = SKILL_LEVELS.get(skill_index, 1)
+
+    if player.level < req_level:
+        await query.answer(f"Откроется на {req_level} уровне!", show_alert=True)
+        return
 
     # Проверить кулдаун
     if fight.cooldowns.get(skill_id, 0) > 0:

@@ -19,6 +19,10 @@ def create_mana_bar(current: int, maximum: int, length: int = 10) -> str:
     return "▓" * filled + "░" * (length - filled)
 
 
+# Уровни открытия умений
+SKILL_LEVELS = {0: 1, 1: 3, 2: 6, 3: 10}
+
+
 def get_fight_keyboard(fight, player) -> InlineKeyboardMarkup:
     """Создать клавиатуру для боя"""
     from data import CLASSES
@@ -37,9 +41,14 @@ def get_fight_keyboard(fight, player) -> InlineKeyboardMarkup:
         class_data = CLASSES[player.player_class]
         skills = class_data.get("skills", {})
         skill_row = []
-        for skill_id, skill in skills.items():
+        for i, (skill_id, skill) in enumerate(skills.items()):
+            req_level = SKILL_LEVELS.get(i, 1)
+            is_locked = player.level < req_level
             cd = fight.cooldowns.get(skill_id, 0)
-            if cd > 0:
+
+            if is_locked:
+                btn_text = f"🔒 Ур.{req_level}"
+            elif cd > 0:
                 btn_text = f"{skill['emoji']} ({cd})"
             else:
                 btn_text = f"{skill['emoji']} {skill['name']}"

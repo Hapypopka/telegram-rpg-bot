@@ -6,6 +6,7 @@ import asyncio
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from telegram.error import BadRequest
 
 from data import CLASSES
 from models.pvp_fight import PvPFight
@@ -427,6 +428,8 @@ async def update_pvp_messages(context, fight: PvPFight, current_chat_id: int):
             text=text1,
             reply_markup=kb1
         )
+    except BadRequest:
+        pass  # Сообщение не изменилось - игнорируем
     except Exception:
         pass
 
@@ -440,6 +443,8 @@ async def update_pvp_messages(context, fight: PvPFight, current_chat_id: int):
             text=text2,
             reply_markup=kb2
         )
+    except BadRequest:
+        pass  # Сообщение не изменилось - игнорируем
     except Exception:
         pass
 
@@ -508,6 +513,8 @@ async def end_pvp_fight(context, fight: PvPFight, fight_id: str):
             text=winner_text,
             reply_markup=kb
         )
+    except BadRequest:
+        pass
     except Exception:
         pass
 
@@ -518,6 +525,8 @@ async def end_pvp_fight(context, fight: PvPFight, fight_id: str):
             text=loser_text,
             reply_markup=kb
         )
+    except BadRequest:
+        pass
     except Exception:
         pass
 

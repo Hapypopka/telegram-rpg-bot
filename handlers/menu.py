@@ -5,7 +5,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-from data import CLASSES
+from data import CLASSES, TALENTS
 from utils.storage import get_player, save_data
 from utils.helpers import create_hp_bar, create_mana_bar
 
@@ -210,6 +210,11 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Пройдено этажей: {player.stats.get('floors', 0)}
 Квестов выполнено: {player.stats.get('quests_done', 0)}"""
 
+    # Проверить, есть ли нераспределённые таланты
+    talent_label = "🌟 Таланты"
+    if player.pending_talent_levels:
+        talent_label = f"🌟 Таланты ({len(player.pending_talent_levels)}❗)"
+
     keyboard = [
         [
             InlineKeyboardButton("⚔️ Снаряжение", callback_data="equipment"),
@@ -217,6 +222,9 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton("✨ Умения", callback_data="skills"),
+            InlineKeyboardButton(talent_label, callback_data="talents")
+        ],
+        [
             InlineKeyboardButton("📊 Статистика", callback_data="stats")
         ],
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
@@ -334,3 +342,157 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text(
         text, reply_markup=InlineKeyboardMarkup(keyboard)    )
+
+
+async def show_talents(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать таланты игрока"""
+    query = update.callback_query
+    await query.answer()
+
+    player = get_player(query.from_user.id)
+
+    if not player.player_class or player.player_class not in TALENTS:
+        await query.edit_message_text(
+            "❌ Таланты недоступны для твоего класса.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="profile")]])
+        )
+        return
+
+    class_talents = TALENTS[player.player_class]
+    class_data = CLASSES.get(player.player_class, {})
+
+    text = f"🌟 ТАЛАНТЫ ({class_data.get('name', '')})\n\n"
+
+    # Показать выбранные таланты
+    if player.talents:
+        text += "✅ Выбранные таланты:\n"
+        for level, talents_list in sorted(class_talents.items()):
+            for talent in talents_list:
+                if talent["id"] in player.talents:
+                    text += f"  {talent['emoji']} {talent['name']} ({talent['desc']})\n"
+        text += "\n"
+
+    # Показать нераспределённые таланты
+    if player.pending_talent_levels:
+        text += f"❗ Нераспределённых талантов: {len(player.pending_talent_levels)}\n"
+        text += "Выбери талант для уровня:\n\n"
+
+    # Показать все уровни талантов
+    for level in sorted(class_talents.keys()):
+        talent_options = class_talents[level]
+
+        # Проверить, выбран ли талант на этом уровне
+        chosen = None
+        for talent in talent_options:
+            if talent["id"] in player.talents:
+                chosen = talent
+                break
+
+        if chosen:
+            text += f"📗 Уровень {level}: {chosen['emoji']} {chosen['name']}\n"
+        elif level in player.pending_talent_levels:
+            text += f"❓ Уровень {level}: Выбери талант!\n"
+        elif player.level >= level:
+            text += f"❓ Уровень {level}: Не выбран\n"
+        else:
+            text += f"🔒 Уровень {level}: Откроется на {level} уровне\n"
+
+    # Кнопки для выбора талантов
+    keyboard = []
+
+    # Если есть нераспределённые таланты, показать кнопку выбора
+    if player.pending_talent_levels:
+        next_level = player.pending_talent_levels[0]
+        keyboard.append([InlineKeyboardButton(
+            f"🌟 Выбрать талант (Ур. {next_level})",
+            callback_data=f"talent_choose_{next_level}"
+        )])
+
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="profile")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def show_talent_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать выбор таланта для конкретного уровня"""
+    query = update.callback_query
+    await query.answer()
+
+    level = int(query.data.replace("talent_choose_", ""))
+    player = get_player(query.from_user.id)
+
+    if level not in player.pending_talent_levels:
+        await query.answer("Этот талант уже выбран!", show_alert=True)
+        return
+
+    if player.player_class not in TALENTS or level not in TALENTS[player.player_class]:
+        await query.answer("Таланты недоступны!", show_alert=True)
+        return
+
+    talent_options = TALENTS[player.player_class][level]
+    class_data = CLASSES.get(player.player_class, {})
+
+    text = f"🌟 ВЫБОР ТАЛАНТА (Уровень {level})\n"
+    text += f"Класс: {class_data.get('name', '')}\n\n"
+    text += "Выбери один талант:\n\n"
+
+    keyboard = []
+    for talent in talent_options:
+        text += f"{talent['emoji']} **{talent['name']}**\n"
+        text += f"  {talent['desc']}\n\n"
+
+        keyboard.append([InlineKeyboardButton(
+            f"{talent['emoji']} {talent['name']}",
+            callback_data=f"talent_select_{level}_{talent['id']}"
+        )])
+
+    keyboard.append([InlineKeyboardButton("🔙 Отмена", callback_data="talents")])
+
+    await query.edit_message_text(
+        text, reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def select_talent(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Выбрать талант"""
+    query = update.callback_query
+
+    # Парсим: talent_select_<level>_<talent_id>
+    parts = query.data.replace("talent_select_", "").split("_", 1)
+    level = int(parts[0])
+    talent_id = parts[1]
+
+    player = get_player(query.from_user.id)
+
+    # Проверки
+    if level not in player.pending_talent_levels:
+        await query.answer("Этот талант уже выбран!", show_alert=True)
+        return
+
+    if player.player_class not in TALENTS or level not in TALENTS[player.player_class]:
+        await query.answer("Талант недоступен!", show_alert=True)
+        return
+
+    # Найти талант
+    talent_options = TALENTS[player.player_class][level]
+    chosen_talent = None
+    for talent in talent_options:
+        if talent["id"] == talent_id:
+            chosen_talent = talent
+            break
+
+    if not chosen_talent:
+        await query.answer("Талант не найден!", show_alert=True)
+        return
+
+    # Выбрать талант
+    player.talents.append(talent_id)
+    player.pending_talent_levels.remove(level)
+    save_data()
+
+    await query.answer(f"Талант '{chosen_talent['name']}' выбран!", show_alert=True)
+
+    # Вернуться к списку талантов
+    await show_talents(update, context)

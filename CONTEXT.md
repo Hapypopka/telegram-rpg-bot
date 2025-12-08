@@ -1,101 +1,104 @@
-# RPG Telegram Bot - "Тени Подземелий"
+# Проект: Telegram RPG Bot "Тени Подземелий"
 
 ## Структура проекта
-
 ```
-БОТ/
-├── bot.py              # Главный файл, регистрация хэндлеров
-├── config.py           # BOT_TOKEN и DATA_FILE
+C:\Users\Faiz\Desktop\БОТ\
+├── bot.py                 # Главный файл, регистрация обработчиков
+├── config.py              # Конфигурация (BOT_TOKEN)
 ├── data/
-│   ├── __init__.py     # Экспорт всех данных
-│   ├── classes.py      # CLASSES - классы персонажей (воин, маг, лучник)
-│   ├── dungeons.py     # DUNGEONS - подземелья
-│   ├── items.py        # ITEMS, LEGENDARY_SETS - предметы и сеты
-│   ├── quests.py       # QUESTS - квесты
-│   └── tavern.py       # FOOD_MENU, MERCENARIES, BLACKSMITH_UPGRADES, ALCHEMY_RECIPES
+│   ├── __init__.py        # Экспорт констант
+│   ├── classes.py         # CLASSES - классы персонажей
+│   ├── dungeons.py        # DUNGEONS, ENEMIES - подземелья и враги
+│   ├── items.py           # ITEMS, EPIC_SETS, LEGENDARY_WEAPONS, SLOT_NAMES
+│   ├── quests.py          # QUESTS, ACHIEVEMENTS, DAILY_REWARDS
+│   └── tavern.py          # TAVERN_FOOD, MERCENARIES, BLACKSMITH_UPGRADES,
+│                          # CRAFT_RECIPES, ALCHEMY_RECIPES, LEGENDARY_CRAFT_RECIPES, SOCKETS
 ├── handlers/
-│   ├── menu.py         # start, main_menu, show_profile, show_skills, set_player_name
-│   ├── combat.py       # fight_attack, fight_block, fight_skill, fight_potion, fight_flee
-│   ├── dungeon.py      # show_dungeons, enter_dungeon, next_floor, active_fights
-│   ├── tavern.py       # show_tavern, show_blacksmith, show_alchemist, show_quests
-│   ├── inventory.py    # show_inventory, show_equipment, equip_item, show_shop
-│   └── misc.py         # show_achievements, show_daily, claim_daily, rest, show_titles
+│   ├── menu.py            # start, main_menu, show_profile, show_skills, регистрация
+│   ├── combat.py          # Боевая система, атаки, скиллы, зелья
+│   ├── dungeon.py         # Подземелья, этажи, боссы
+│   ├── tavern.py          # Таверна, кузнец, алхимик, квесты, сокеты
+│   ├── inventory.py       # Инвентарь, экипировка, магазин, слоты зелий
+│   └── misc.py            # Достижения, ежедневки, отдых, титулы
 ├── models/
-│   ├── player.py       # Player класс с сериализацией и методами статов
-│   └── fight.py        # Fight класс - состояние боя
-├── utils/
-│   ├── storage.py      # load_data, save_data, get_player, players_data
-│   └── helpers.py      # create_hp_bar, get_fight_keyboard, update_fight_ui
-└── CONTEXT.md          # Этот файл
+│   ├── player.py          # Класс Player - данные игрока
+│   └── fight.py           # Класс Fight - состояние боя
+└── utils/
+    ├── storage.py         # Загрузка/сохранение данных (players_data.json)
+    └── helpers.py         # Вспомогательные функции, UI боя
 ```
 
-## Основные механики
+## Основные системы
 
-### Регистрация (handlers/menu.py)
-- ConversationHandler для ввода никнейма (3-20 символов)
-- Затем выбор класса
-- Состояние WAITING_NAME = 1
+### Классы персонажей
+- Воин, Маг, Разбойник, Паладин
 
-### Классы (data/classes.py)
-Только 3 класса: warrior, mage, archer
-- У каждого 4 умения
-- Умения открываются по уровням: 1, 3, 6, 10 (ульта)
-- SKILL_LEVELS = {0: 1, 1: 3, 2: 6, 3: 10}
+### Подземелья
+- forest (Лес) → mines (Шахты) → crypt (Крипта) → abyss (Бездна) → chaos (Хаос)
+- Каждое имеет врагов, босса, множители exp/gold
 
-### Боевая система (handlers/combat.py, models/fight.py)
-- Пошаговый бой
-- Атака, блок, умения, зелья, побег
-- Эффекты: яд, оглушение, замедление, невидимость, барьер
-- После победы: опыт, золото, лут
+### Боевая система
+- Атака, блок, скиллы (зависят от класса и уровня)
+- 2 слота зелий (настраиваемые в инвентаре)
+- Бафы от еды, наёмники
+- Эффекты: яд, ожог, вампиризм, оглушение
 
-### Подземелья (data/dungeons.py)
-- 5 подземелий с разными уровнями сложности
-- Каждое имеет этажи и босса
-- Враги генерируются по dungeon["enemies"]
+### Экипировка
+- Слоты: weapon, helmet, shoulders, chest, belt, gloves, leggings, boots, ring, necklace
+- Редкости: common, uncommon, rare, epic, legendary
+- Эпические сеты с бонусами
+- **Сокеты** - вставляются в экипировку (10k-100k золота)
 
-### Инвентарь (handlers/inventory.py)
-- equipment: weapon, armor, accessory
-- legendary_equipment: helmet, chest, gloves, boots
-- inventory: dict {item_id: count}
+### Система сокетов
+- Тир 1 (10,000 золота): +3 урон/защита, +20 HP, +15 мана
+- Тир 2 (30,000 золота): +8 урон/защита, +50 HP, +40 мана
+- Тир 3 (60,000 золота): +15 урон/защита, +100 HP, +80 мана
+- Тир 4 (100,000 золота): +25 урон/защита + доп. бонусы (крит, уклонение, вампиризм)
+- Меню: Таверна → Кузнец → Сокеты
 
-### Аксессуары (data/items.py)
-- crit_bonus, damage_bonus, defense_bonus, hp_bonus
-- lifesteal, mana_bonus, dodge_bonus
-- berserker (больше урона при низком HP)
+### Дроп чешуи дракона (с боссов)
+| Подземелье | Шанс |
+|------------|------|
+| Лес | 5% |
+| Шахты | 10% |
+| Крипта | 15% |
+| Бездна | 25% |
+| Хаос | 50% |
+- Падает 1-3 шт. за босса
 
-### Player класс (models/player.py)
+### Квесты
+- Сюжетные (story_forest, story_mines, story_crypt, story_abyss, story_chaos) - убить босса
+- Ежедневные/еженедельные
+- Легендарные (получить чертёж легендарного оружия)
+
+### Крафт
+- Кузнец: обычные рецепты, редкие, легендарные
+- Алхимик: зелья HP, маны, эликсиры
+
+## Модель Player (основные поля)
 ```python
-class Player:
-    user_id, name, player_class
-    level, exp, exp_to_level, gold
-    hp, mana
-    inventory: dict
-    equipment: {weapon, armor, accessory}
-    legendary_equipment: {helmet, chest, gloves, boots}
-    blacksmith_upgrades: dict
-    current_dungeon, current_floor
-    stats: {kills, boss_kills, deaths, floors, max_floor, crits, gold_earned, gold_spent, quests_done, dailies_claimed}
-    quest_progress, completed_quests, achievements, titles, title
-    last_daily, daily_streak, food_buffs, mercenary
+user_id, name, player_class, level, exp, exp_to_level
+hp, mana, gold
+inventory = {}           # item_id -> количество
+equipment = {}           # slot -> item_id
+stats = {}               # kills, boss_kills, deaths, floors, etc.
+quest_progress = {}      # quest_id -> progress
+completed_quests = []    # список завершённых квестов
+titles = [], title       # титулы
+achievements = []        # достижения
+food_buffs = {}          # бафы от еды
+mercenary = None         # наёмник
+potion_slots = {"slot_1": "hp_potion_small", "slot_2": "mana_potion_small"}
+item_sockets = {}        # slot -> socket_id
 ```
-
-### Сохранение (utils/storage.py)
-- players_data: dict {user_id: Player}
-- save_data() сохраняет в players_data.json
-- get_player(user_id) создает нового если нет
 
 ## GitHub
-- Репозиторий: https://github.com/Hapypopka/telegram-rpg-bot.git
-- Сервер: /root/telegram_rpg/
+Репозиторий: https://github.com/Hapypopka/telegram-rpg-bot.git
 
-## Команды на сервере
-```bash
-cd /root/telegram_rpg
-git pull origin main
-rm players_data.json  # сбросить игроков
-python bot.py
-```
-
-## TODO / Известные проблемы
-- Квесты не засчитываются (нужно добавить вызовы обновления прогресса)
-- Ачивки не засчитываются (нужно добавить проверки при действиях)
+## История изменений
+1. Исправлены сюжетные квесты - теперь отслеживаются при убийстве боссов
+2. Фарм золота уменьшен в 10 раз
+3. Добавлена система сокетов с 4 уровнями
+4. Добавлены настраиваемые слоты зелий для боя
+5. Исправлен порядок обработчиков (smith_sockets до общего ^smith_)
+6. Добавлено отображение суммарных бонусов от сокетов в меню

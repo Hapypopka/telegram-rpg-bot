@@ -11,7 +11,8 @@ from utils.storage import load_data, save_data
 # Импорт обработчиков
 from handlers.menu import (
     start, main_menu, show_class_selection, select_class,
-    show_profile, show_stats, show_skills, set_player_name, WAITING_NAME
+    show_profile, show_stats, show_skills, set_player_name, WAITING_NAME,
+    show_talents, show_talent_choice, select_talent
 )
 from handlers.combat import (
     fight_attack, fight_block, fight_skill, fight_potion, fight_flee
@@ -70,6 +71,9 @@ def main():
     app.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
     app.add_handler(CallbackQueryHandler(show_stats, pattern="^stats$"))
     app.add_handler(CallbackQueryHandler(show_skills, pattern="^skills$"))
+    app.add_handler(CallbackQueryHandler(show_talents, pattern="^talents$"))
+    app.add_handler(CallbackQueryHandler(show_talent_choice, pattern="^talent_choose_"))
+    app.add_handler(CallbackQueryHandler(select_talent, pattern="^talent_select_"))
 
     # Подземелья
     app.add_handler(CallbackQueryHandler(show_dungeons, pattern="^dungeons$"))

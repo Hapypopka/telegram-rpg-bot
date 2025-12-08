@@ -1,7 +1,8 @@
 """
-Вспомогательные функции для UI
+Вспомогательные функции для UI и генерации предметов
 """
 
+import random
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -166,3 +167,269 @@ MP: [{player_mana_bar}] {fight.player_mana}/{player.get_max_mana()}{player_effec
             await query.edit_message_text(text, reply_markup=keyboard)
         except Exception:
             print(f"Ошибка обновления UI: {e}")
+
+
+# =====================
+# ПРОЦЕДУРНАЯ ГЕНЕРАЦИЯ ПРЕДМЕТОВ
+# =====================
+
+# Префиксы для имён предметов по редкости
+ITEM_PREFIXES = {
+    "common": ["Простой", "Обычный", "Старый", "Потёртый"],
+    "uncommon": ["Добротный", "Крепкий", "Надёжный", "Прочный"],
+    "rare": ["Отличный", "Искусный", "Мастерский", "Закалённый"],
+    "epic": ["Великий", "Могучий", "Легендарный", "Древний"]
+}
+
+# Суффиксы для бонусов
+ITEM_SUFFIXES = {
+    "damage": ["Силы", "Мощи", "Ярости", "Разрушения"],
+    "defense": ["Защиты", "Стойкости", "Крепости", "Брони"],
+    "hp": ["Жизни", "Здоровья", "Выносливости", "Витальности"],
+    "crit": ["Точности", "Меткости", "Удачи", "Везения"],
+    "dodge": ["Уклонения", "Ловкости", "Тени", "Ветра"],
+    "lifesteal": ["Вампиризма", "Крови", "Жажды", "Похищения"],
+    "block": ["Щита", "Парирования", "Отражения", "Стража"],
+    "mana": ["Магии", "Мудрости", "Интеллекта", "Знания"]
+}
+
+# Базовые типы предметов
+ITEM_BASE_TYPES = {
+    "weapon": {
+        "sword": {"name": "Меч", "emoji": "⚔️", "base_damage": 10},
+        "staff": {"name": "Посох", "emoji": "🪄", "base_damage": 8, "base_mana": 10},
+        "dagger": {"name": "Кинжал", "emoji": "🗡️", "base_damage": 7, "base_crit": 5},
+        "bow": {"name": "Лук", "emoji": "🏹", "base_damage": 9, "base_crit": 3},
+        "axe": {"name": "Топор", "emoji": "🪓", "base_damage": 12},
+    },
+    "helmet": {
+        "helm": {"name": "Шлем", "emoji": "⛑️", "base_defense": 4, "base_hp": 10},
+        "hood": {"name": "Капюшон", "emoji": "🎭", "base_defense": 2, "base_mana": 15},
+        "crown": {"name": "Корона", "emoji": "👑", "base_defense": 3, "base_crit": 2},
+    },
+    "chest": {
+        "armor": {"name": "Броня", "emoji": "🛡️", "base_defense": 8, "base_hp": 20},
+        "robe": {"name": "Мантия", "emoji": "🧥", "base_defense": 4, "base_mana": 25},
+        "vest": {"name": "Жилет", "emoji": "🥋", "base_defense": 5, "base_dodge": 3},
+    },
+    "gloves": {
+        "gauntlets": {"name": "Рукавицы", "emoji": "🤜", "base_defense": 3, "base_damage": 2},
+        "gloves": {"name": "Перчатки", "emoji": "🧤", "base_defense": 2, "base_crit": 2},
+    },
+    "boots": {
+        "boots": {"name": "Сапоги", "emoji": "👢", "base_defense": 3, "base_hp": 10},
+        "shoes": {"name": "Ботинки", "emoji": "👟", "base_defense": 2, "base_dodge": 3},
+    },
+    "ring": {
+        "ring": {"name": "Кольцо", "emoji": "💍", "base_crit": 3},
+        "band": {"name": "Перстень", "emoji": "💎", "base_damage": 3},
+    },
+    "necklace": {
+        "amulet": {"name": "Амулет", "emoji": "📿", "base_hp": 15},
+        "pendant": {"name": "Кулон", "emoji": "🔗", "base_mana": 15},
+    }
+}
+
+# Множители статов по редкости
+RARITY_MULTIPLIERS = {
+    "common": {"stat_mult": 1.0, "bonus_count": 0, "price_mult": 1.0},
+    "uncommon": {"stat_mult": 1.3, "bonus_count": 1, "price_mult": 1.5},
+    "rare": {"stat_mult": 1.7, "bonus_count": 2, "price_mult": 2.5},
+    "epic": {"stat_mult": 2.2, "bonus_count": 3, "price_mult": 4.0}
+}
+
+# Возможные бонусы по типу слота
+SLOT_BONUS_POOLS = {
+    "weapon": ["damage", "crit", "lifesteal"],
+    "helmet": ["hp", "mana", "defense"],
+    "chest": ["hp", "defense", "block"],
+    "gloves": ["damage", "crit", "dodge"],
+    "boots": ["dodge", "hp", "defense"],
+    "ring": ["crit", "damage", "lifesteal"],
+    "necklace": ["hp", "mana", "defense"]
+}
+
+# Значения бонусов по уровню подземелья
+DUNGEON_LEVEL_BONUS = {
+    "forest": 1,
+    "mines": 2,
+    "crypt": 3,
+    "abyss": 4,
+    "chaos": 5
+}
+
+
+def generate_procedural_item(dungeon_id: str, slot: str = None, forced_rarity: str = None) -> dict:
+    """
+    Генерирует случайный предмет на основе подземелья.
+
+    Args:
+        dungeon_id: ID подземелья (forest, mines, crypt, abyss, chaos)
+        slot: Тип слота (weapon, helmet, chest, etc). Если None - выбирается случайно
+        forced_rarity: Принудительная редкость. Если None - определяется случайно
+
+    Returns:
+        Словарь с данными предмета
+    """
+    dungeon_level = DUNGEON_LEVEL_BONUS.get(dungeon_id, 1)
+
+    # Выбрать слот
+    if slot is None:
+        slot = random.choice(list(ITEM_BASE_TYPES.keys()))
+
+    # Выбрать базовый тип предмета
+    base_types = ITEM_BASE_TYPES.get(slot, {})
+    if not base_types:
+        return None
+
+    base_type_id = random.choice(list(base_types.keys()))
+    base_type = base_types[base_type_id]
+
+    # Определить редкость
+    if forced_rarity:
+        rarity = forced_rarity
+    else:
+        rarity_roll = random.randint(1, 100)
+        if rarity_roll <= 50:
+            rarity = "common"
+        elif rarity_roll <= 80:
+            rarity = "uncommon"
+        elif rarity_roll <= 95:
+            rarity = "rare"
+        else:
+            rarity = "epic"
+
+    rarity_data = RARITY_MULTIPLIERS[rarity]
+    stat_mult = rarity_data["stat_mult"] * (1 + (dungeon_level - 1) * 0.2)
+    bonus_count = rarity_data["bonus_count"]
+
+    # Базовые статы
+    item = {
+        "type": "weapon" if slot == "weapon" else "armor" if slot in ["helmet", "chest", "gloves", "boots", "shoulders", "leggings", "belt"] else "accessory",
+        "slot": slot,
+        "rarity": rarity,
+        "emoji": base_type["emoji"],
+        "procedural": True,  # Метка процедурного предмета
+        "dungeon_source": dungeon_id
+    }
+
+    # Применить базовые статы с множителями
+    if "base_damage" in base_type:
+        item["damage"] = int(base_type["base_damage"] * stat_mult)
+    if "base_defense" in base_type:
+        item["defense"] = int(base_type["base_defense"] * stat_mult)
+    if "base_hp" in base_type:
+        item["hp_bonus"] = int(base_type["base_hp"] * stat_mult)
+    if "base_mana" in base_type:
+        item["mana_bonus"] = int(base_type["base_mana"] * stat_mult)
+    if "base_crit" in base_type:
+        item["crit_bonus"] = int(base_type["base_crit"] * stat_mult)
+    if "base_dodge" in base_type:
+        item["dodge_bonus"] = int(base_type["base_dodge"] * stat_mult)
+
+    # Добавить случайные бонусы
+    bonus_pool = SLOT_BONUS_POOLS.get(slot, ["hp", "defense"])
+    applied_bonuses = []
+
+    for _ in range(bonus_count):
+        available_bonuses = [b for b in bonus_pool if b not in applied_bonuses]
+        if not available_bonuses:
+            break
+
+        bonus_type = random.choice(available_bonuses)
+        applied_bonuses.append(bonus_type)
+
+        bonus_value = int(dungeon_level * stat_mult * random.uniform(1.5, 3.0))
+
+        if bonus_type == "damage":
+            item["damage_bonus"] = item.get("damage_bonus", 0) + bonus_value
+        elif bonus_type == "defense":
+            item["defense"] = item.get("defense", 0) + bonus_value
+        elif bonus_type == "hp":
+            item["hp_bonus"] = item.get("hp_bonus", 0) + bonus_value * 5
+        elif bonus_type == "mana":
+            item["mana_bonus"] = item.get("mana_bonus", 0) + bonus_value * 3
+        elif bonus_type == "crit":
+            item["crit_bonus"] = item.get("crit_bonus", 0) + max(1, bonus_value // 2)
+        elif bonus_type == "dodge":
+            item["dodge_bonus"] = item.get("dodge_bonus", 0) + max(1, bonus_value // 2)
+        elif bonus_type == "lifesteal":
+            item["lifesteal"] = item.get("lifesteal", 0) + round(bonus_value * 0.01, 2)
+        elif bonus_type == "block":
+            item["block"] = item.get("block", 0) + max(1, bonus_value // 2)
+
+    # Сгенерировать имя
+    prefix = random.choice(ITEM_PREFIXES.get(rarity, ["Обычный"]))
+
+    # Выбрать суффикс на основе главного бонуса
+    main_stat = None
+    if applied_bonuses:
+        main_stat = applied_bonuses[0]
+    elif item.get("damage") or item.get("damage_bonus"):
+        main_stat = "damage"
+    elif item.get("defense"):
+        main_stat = "defense"
+
+    suffix = ""
+    if main_stat and main_stat in ITEM_SUFFIXES:
+        suffix = " " + random.choice(ITEM_SUFFIXES[main_stat])
+
+    item["name"] = f"{prefix} {base_type['name']}{suffix}"
+
+    # Рассчитать цену
+    base_price = 50 * dungeon_level
+    total_stats = sum([
+        item.get("damage", 0) * 5,
+        item.get("damage_bonus", 0) * 5,
+        item.get("defense", 0) * 4,
+        item.get("hp_bonus", 0),
+        item.get("mana_bonus", 0),
+        item.get("crit_bonus", 0) * 10,
+        item.get("dodge_bonus", 0) * 10,
+        item.get("lifesteal", 0) * 500,
+        item.get("block", 0) * 10
+    ])
+    item["price"] = int((base_price + total_stats) * rarity_data["price_mult"])
+
+    # Сгенерировать уникальный ID
+    item["id"] = f"proc_{dungeon_id}_{slot}_{random.randint(10000, 99999)}"
+
+    return item
+
+
+def get_item_description(item: dict) -> str:
+    """Получить описание предмета со всеми статами"""
+    from data import RARITY_EMOJI
+
+    lines = []
+
+    rarity_emoji = RARITY_EMOJI.get(item.get("rarity", "common"), "")
+    lines.append(f"{rarity_emoji}{item['emoji']} **{item['name']}**")
+
+    stats = []
+    if item.get("damage"):
+        stats.append(f"⚔️ {item['damage']} урона")
+    if item.get("damage_bonus"):
+        stats.append(f"⚔️ +{item['damage_bonus']} урона")
+    if item.get("defense"):
+        stats.append(f"🛡️ {item['defense']} защиты")
+    if item.get("hp_bonus"):
+        stats.append(f"❤️ +{item['hp_bonus']} HP")
+    if item.get("mana_bonus"):
+        stats.append(f"💙 +{item['mana_bonus']} маны")
+    if item.get("crit_bonus"):
+        stats.append(f"🎯 +{item['crit_bonus']}% крита")
+    if item.get("dodge_bonus"):
+        stats.append(f"💨 +{item['dodge_bonus']}% уклонения")
+    if item.get("lifesteal"):
+        stats.append(f"🩸 +{int(item['lifesteal'] * 100)}% вампиризма")
+    if item.get("block"):
+        stats.append(f"🛡️ +{item['block']}% блока")
+
+    if stats:
+        lines.append(", ".join(stats))
+
+    if item.get("price"):
+        lines.append(f"💰 {item['price']} золота")
+
+    return "\n".join(lines)

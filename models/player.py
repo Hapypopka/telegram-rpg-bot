@@ -89,6 +89,14 @@ class Player:
         # Сокеты в экипировке (slot -> socket_id)
         self.item_sockets = {}
 
+        # Таланты (список выбранных талант-id)
+        self.talents = []
+        # Уровни, на которых нужно выбрать талант (очередь)
+        self.pending_talent_levels = []
+
+        # Процедурные предметы (id -> item_data)
+        self.procedural_items = {}
+
     def to_dict(self) -> dict:
         """Сериализация в словарь"""
         return {
@@ -117,7 +125,10 @@ class Player:
             "food_buffs": self.food_buffs,
             "mercenary": self.mercenary,
             "potion_slots": self.potion_slots,
-            "item_sockets": self.item_sockets
+            "item_sockets": self.item_sockets,
+            "talents": self.talents,
+            "pending_talent_levels": self.pending_talent_levels,
+            "procedural_items": self.procedural_items
         }
 
     @classmethod
@@ -196,23 +207,42 @@ class Player:
         if "item_sockets" not in data:
             data["item_sockets"] = {}
 
+        # Миграция: добавить таланты для старых игроков
+        if "talents" not in data:
+            data["talents"] = []
+        if "pending_talent_levels" not in data:
+            data["pending_talent_levels"] = []
+
+        # Миграция: добавить процедурные предметы для старых игроков
+        if "procedural_items" not in data:
+            data["procedural_items"] = {}
+
         for key, value in data.items():
             if hasattr(player, key):
                 setattr(player, key, value)
 
         return player
 
+    def get_item_data(self, item_id: str) -> dict:
+        """Получить данные предмета (обычного или процедурного)"""
+        # Сначала проверяем процедурные предметы
+        if item_id and item_id.startswith("proc_"):
+            return self.procedural_items.get(item_id, {})
+        # Иначе берём из обычных предметов
+        return ITEMS.get(item_id, {})
+
     def get_equipped_stats(self) -> dict:
         """Получить суммарные статы от всей экипировки"""
         stats = {
             "hp": 0, "mana": 0, "damage": 0, "defense": 0,
-            "crit": 0, "dodge": 0, "lifesteal": 0
+            "crit": 0, "dodge": 0, "lifesteal": 0, "block": 0,
+            "fire_res": 0, "poison_res": 0, "mana_regen": 0, "double_hit": 0
         }
 
         for slot, item_id in self.equipment.items():
             if not item_id:
                 continue
-            item = ITEMS.get(item_id, {})
+            item = self.get_item_data(item_id)
             stats["hp"] += item.get("hp_bonus", 0) + item.get("hp", 0)
             stats["mana"] += item.get("mana_bonus", 0) + item.get("mana", 0)
             stats["damage"] += item.get("damage", 0) + item.get("damage_bonus", 0)
@@ -220,6 +250,11 @@ class Player:
             stats["crit"] += item.get("crit_bonus", 0) + item.get("crit", 0)
             stats["dodge"] += item.get("dodge_bonus", 0) + item.get("dodge", 0)
             stats["lifesteal"] += item.get("lifesteal", 0)
+            stats["block"] += item.get("block", 0)
+            stats["fire_res"] += item.get("fire_res", 0)
+            stats["poison_res"] += item.get("poison_res", 0)
+            stats["mana_regen"] += item.get("mana_regen", 0)
+            stats["double_hit"] += item.get("double_hit", 0)
 
         # Бонус от эпического сета
         set_bonus = self.get_epic_set_bonus()
@@ -256,7 +291,11 @@ class Player:
         """Получить суммарные бонусы от всех сокетов"""
         from data.tavern import SOCKETS
 
-        stats = {"hp": 0, "mana": 0, "damage": 0, "defense": 0, "crit": 0, "dodge": 0, "lifesteal": 0}
+        stats = {
+            "hp": 0, "mana": 0, "damage": 0, "defense": 0,
+            "crit": 0, "dodge": 0, "lifesteal": 0, "block": 0,
+            "fire_res": 0, "poison_res": 0, "mana_regen": 0, "double_hit": 0
+        }
         for slot, socket_id in self.item_sockets.items():
             if not socket_id or not self.equipment.get(slot):
                 continue
@@ -281,6 +320,9 @@ class Player:
         # Бонус от экипировки
         hp += self.get_equipped_stats()["hp"]
 
+        # Бонус от талантов
+        hp += self.get_talent_stats().get("hp", 0)
+
         return hp
 
     def get_max_mana(self) -> int:
@@ -296,6 +338,9 @@ class Player:
 
         # Бонус от экипировки
         mana += self.get_equipped_stats()["mana"]
+
+        # Бонус от талантов
+        mana += self.get_talent_stats().get("mana", 0)
 
         return mana
 
@@ -317,6 +362,9 @@ class Player:
         sharpen = self.blacksmith_upgrades.get("sharpen", 0)
         damage += sharpen * 3
 
+        # Бонус от талантов
+        damage += self.get_talent_stats().get("damage", 0)
+
         return damage
 
     def get_total_defense(self) -> int:
@@ -337,6 +385,9 @@ class Player:
         reinforce = self.blacksmith_upgrades.get("reinforce", 0)
         defense += reinforce * 3
 
+        # Бонус от талантов
+        defense += self.get_talent_stats().get("defense", 0)
+
         return defense
 
     def get_crit_chance(self) -> int:
@@ -350,16 +401,58 @@ class Player:
         # Бонус от экипировки
         crit += self.get_equipped_stats()["crit"]
 
+        # Бонус от талантов
+        crit += self.get_talent_stats().get("crit", 0)
+
         return crit
+
+    def get_crit_multiplier(self) -> float:
+        """Множитель критического урона (зависит от оружия)"""
+        base_mult = 1.5
+
+        # Бонус от оружия
+        weapon_id = self.equipment.get("weapon")
+        if weapon_id:
+            weapon = self.get_item_data(weapon_id)
+            base_mult = weapon.get("crit_mult", 1.5)
+
+        return base_mult
 
     def get_dodge_chance(self) -> int:
         """Шанс уклонения"""
         dodge = 0
 
         # Бонус от экипировки
-        dodge += self.get_equipped_stats()["dodge"]
+        dodge += self.get_equipped_stats().get("dodge", 0)
+
+        # Бонус от талантов
+        dodge += self.get_talent_stats().get("dodge", 0)
 
         return dodge
+
+    def get_block_chance(self) -> int:
+        """Шанс блока (парирования)"""
+        block = 0
+
+        # Бонус от экипировки
+        block += self.get_equipped_stats().get("block", 0)
+
+        # Бонус от талантов
+        block += self.get_talent_stats().get("block", 0)
+
+        return block
+
+    def get_fire_resistance(self) -> int:
+        """Сопротивление огню"""
+        res = self.get_equipped_stats().get("fire_res", 0)
+        res += self.get_talent_stats().get("fire_res", 0)
+        return res
+
+    def get_poison_resistance(self) -> int:
+        """Сопротивление яду"""
+        res = self.get_equipped_stats().get("poison_res", 0)
+        res += self.get_talent_stats().get("poison_res", 0)
+        return res
 
     def get_lifesteal(self) -> float:
         """Вампиризм"""
@@ -372,7 +465,35 @@ class Player:
         # От экипировки
         lifesteal += self.get_equipped_stats()["lifesteal"]
 
+        # От талантов
+        lifesteal += self.get_talent_stats().get("lifesteal", 0)
+
         return lifesteal
+
+    def get_talent_stats(self) -> dict:
+        """Получить суммарные бонусы от всех талантов"""
+        from data import TALENTS
+
+        stats = {
+            "hp": 0, "mana": 0, "damage": 0, "defense": 0,
+            "crit": 0, "dodge": 0, "lifesteal": 0, "block": 0,
+            "fire_res": 0, "poison_res": 0, "mana_regen": 0, "double_hit": 0
+        }
+
+        if not self.player_class or self.player_class not in TALENTS:
+            return stats
+
+        class_talents = TALENTS[self.player_class]
+
+        # Пройти по всем уровням талантов
+        for level, talent_options in class_talents.items():
+            for talent in talent_options:
+                if talent["id"] in self.talents:
+                    bonus = talent.get("bonus", {})
+                    for stat, value in bonus.items():
+                        if stat in stats:
+                            stats[stat] += value
+        return stats
 
     def get_epic_set_bonus(self) -> dict:
         """Получить бонус от эпического сета"""

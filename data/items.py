@@ -121,7 +121,7 @@ ITEMS = {
     },
     "flame_sword": {
         "name": "Пламенный меч", "type": "weapon", "slot": "weapon",
-        "emoji": "🔥", "damage": 35, "burn": 3, "price": 800, "rarity": "rare",
+        "emoji": "🔥", "damage": 35, "burn": 3, "crit_mult": 1.7, "price": 800, "rarity": "rare",
         "craft": {"ore": 15, "essence": 10, "demon_soul": 2}
     },
     "frost_staff": {
@@ -131,14 +131,14 @@ ITEMS = {
     },
     "shadow_dagger": {
         "name": "Теневой кинжал", "type": "weapon", "slot": "weapon",
-        "emoji": "🌑", "damage": 28, "crit_bonus": 15, "price": 750, "rarity": "rare",
+        "emoji": "🌑", "damage": 28, "crit_bonus": 15, "crit_mult": 2.0, "price": 750, "rarity": "rare",
         "craft": {"ore": 8, "essence": 12}
     },
 
     # --- EPIC (фиолетовое, с боссов) ---
     "titans_blade": {
         "name": "Клинок Титана", "type": "weapon", "slot": "weapon",
-        "emoji": "⚔️", "damage": 45, "hp_bonus": 30, "price": 0, "rarity": "epic",
+        "emoji": "⚔️", "damage": 45, "hp_bonus": 30, "crit_mult": 1.8, "price": 0, "rarity": "epic",
         "set": "titan", "boss_drop": "forest"
     },
     "archmage_staff": {
@@ -148,7 +148,7 @@ ITEMS = {
     },
     "phantom_bow": {
         "name": "Фантомный лук", "type": "weapon", "slot": "weapon",
-        "emoji": "👻", "damage": 38, "crit_bonus": 20, "price": 0, "rarity": "epic",
+        "emoji": "👻", "damage": 38, "crit_bonus": 20, "crit_mult": 2.2, "price": 0, "rarity": "epic",
         "set": "phantom", "boss_drop": "crypt"
     },
 
@@ -249,13 +249,13 @@ ITEMS = {
     # --- LEGACY (старые предметы для совместимости) ---
     "firearmor": {
         "name": "Огненная броня", "type": "armor", "slot": "chest",
-        "emoji": "🔥", "defense": 15, "hp_bonus": 25, "price": 400, "rarity": "rare"
+        "emoji": "🔥", "defense": 15, "hp_bonus": 25, "fire_res": 30, "price": 400, "rarity": "rare"
     },
 
     # --- RARE ---
     "plate_armor": {
         "name": "Латный доспех", "type": "armor", "slot": "chest",
-        "emoji": "🛡️", "defense": 18, "hp_bonus": 25, "price": 450, "rarity": "rare",
+        "emoji": "🛡️", "defense": 18, "hp_bonus": 25, "block": 5, "price": 450, "rarity": "rare",
         "craft": {"ore": 15, "leather": 5}
     },
     "mage_robe": {
@@ -267,12 +267,12 @@ ITEMS = {
     # --- EPIC ---
     "titan_plate": {
         "name": "Латы Титана", "type": "armor", "slot": "chest",
-        "emoji": "🎽", "defense": 25, "hp_bonus": 60, "price": 0, "rarity": "epic",
+        "emoji": "🎽", "defense": 25, "hp_bonus": 60, "block": 10, "price": 0, "rarity": "epic",
         "set": "titan", "boss_drop": "forest"
     },
     "archmage_robe": {
         "name": "Мантия Архимага", "type": "armor", "slot": "chest",
-        "emoji": "🧥", "defense": 12, "mana_bonus": 70, "price": 0, "rarity": "epic",
+        "emoji": "🧥", "defense": 12, "mana_bonus": 70, "mana_regen": 5, "price": 0, "rarity": "epic",
         "set": "archmage", "boss_drop": "mines"
     },
     "phantom_cloak": {
@@ -567,6 +567,7 @@ LEGENDARY_WEAPONS = {
         "damage": 80,
         "hp_bonus": 50,
         "crit_bonus": 15,
+        "crit_mult": 2.0,
         "lifesteal": 0.15,
         "rarity": "legendary",
         "class": "warrior",
@@ -581,6 +582,8 @@ LEGENDARY_WEAPONS = {
         "damage": 70,
         "mana_bonus": 100,
         "crit_bonus": 20,
+        "crit_mult": 1.8,
+        "mana_regen": 10,
         "rarity": "legendary",
         "class": "mage",
         "quest_chain": "mage_legend",
@@ -593,7 +596,9 @@ LEGENDARY_WEAPONS = {
         "emoji": "🌪️",
         "damage": 65,
         "crit_bonus": 30,
+        "crit_mult": 2.5,
         "dodge_bonus": 15,
+        "double_hit": 10,
         "rarity": "legendary",
         "class": "archer",
         "quest_chain": "archer_legend",

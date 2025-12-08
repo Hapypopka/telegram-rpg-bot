@@ -71,13 +71,19 @@ async def fight_attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if hasattr(fight, 'potion_buff_damage') and fight.potion_buff_damage > 0:
         base_damage = int(base_damage * (1 + fight.potion_buff_damage))
 
+    # Вариативность урона ±10%
+    damage_variance = random.uniform(0.9, 1.1)
+    base_damage = int(base_damage * damage_variance)
+
     # Крит
     crit_chance = player.get_crit_chance() + fight.food_bonus_crit + fight.merc_bonus_crit
     is_crit = random.randint(1, 100) <= crit_chance
 
     if is_crit:
-        damage = int(base_damage * 1.5)
-        fight.fight_log.append(f"💥 Критический удар! -{damage} HP")
+        # Крит мультипликатор от оружия (по умолчанию 1.5)
+        crit_mult = player.get_crit_multiplier()
+        damage = int(base_damage * crit_mult)
+        fight.fight_log.append(f"💥 Крит x{crit_mult}! -{damage} HP")
         player.stats["crits"] = player.stats.get("crits", 0) + 1
     else:
         damage = base_damage
@@ -87,6 +93,14 @@ async def fight_attack(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Нанести урон
     fight.enemy_hp -= damage
+
+    # Шанс двойного удара (от экипировки/сокетов)
+    double_hit_chance = player.get_equipped_stats().get("double_hit", 0)
+    if double_hit_chance > 0 and random.randint(1, 100) <= double_hit_chance:
+        # Второй удар с 50% урона
+        second_hit = int(damage * 0.5)
+        fight.enemy_hp -= second_hit
+        fight.fight_log.append(f"⚔️⚔️ Двойной удар! -{second_hit} HP")
 
     # Проверить смерть врага
     if fight.enemy_hp <= 0:
@@ -406,8 +420,9 @@ async def process_enemy_attack(query, fight, player):
         if fight.cooldowns[skill_id] > 0:
             fight.cooldowns[skill_id] -= 1
 
-    # Регенерация маны
-    mana_regen = 5 + fight.food_bonus_mana_regen + fight.merc_bonus_mana_regen
+    # Регенерация маны (базовая + от еды + от наёмника + от экипировки)
+    equip_mana_regen = player.get_equipped_stats().get("mana_regen", 0)
+    mana_regen = 5 + fight.food_bonus_mana_regen + fight.merc_bonus_mana_regen + equip_mana_regen
     fight.player_mana = min(fight.player_mana + mana_regen, player.get_max_mana())
 
     # Хил от наёмника
@@ -462,6 +477,10 @@ async def process_enemy_attack(query, fight, player):
     # Атака врага
     enemy_damage = fight.enemy_damage
 
+    # Вариативность урона врага ±10%
+    enemy_variance = random.uniform(0.9, 1.1)
+    enemy_damage = int(enemy_damage * enemy_variance)
+
     # Замедление
     if "slow" in fight.enemy_effects:
         enemy_damage = int(enemy_damage * 0.7)
@@ -471,11 +490,19 @@ async def process_enemy_attack(query, fight, player):
         enemy_damage = int(enemy_damage * 0.3)
         fight.block_next = False
         fight.fight_log.append(f"🛡️ Блок! Получено {enemy_damage} урона")
-    # Уклонение
+    # Активное уклонение (от скилла)
     elif fight.dodge_next:
         enemy_damage = 0
         fight.dodge_next = False
         fight.fight_log.append("💨 Уклонился!")
+    # Пассивное уклонение (от экипировки)
+    elif random.randint(1, 100) <= player.get_dodge_chance():
+        enemy_damage = 0
+        fight.fight_log.append("💨 Уворот!")
+    # Шанс блока (от экипировки)
+    elif random.randint(1, 100) <= player.get_block_chance():
+        enemy_damage = int(enemy_damage * 0.5)
+        fight.fight_log.append(f"🛡️ Парирование! -{enemy_damage} HP")
     else:
         # Барьер
         if fight.barrier > 0:
@@ -517,6 +544,10 @@ async def process_enemy_attack(query, fight, player):
     # Эффекты на игроке
     if "poison" in fight.player_effects:
         poison_dmg = fight.player_effects["poison"] * 3
+        # Сопротивление яду уменьшает урон
+        poison_res = player.get_poison_resistance()
+        if poison_res > 0:
+            poison_dmg = int(poison_dmg * (1 - poison_res / 100))
         fight.player_hp -= poison_dmg
         fight.player_effects["poison"] -= 1
         if fight.player_effects["poison"] <= 0:
@@ -525,6 +556,10 @@ async def process_enemy_attack(query, fight, player):
 
     if "burn" in fight.player_effects:
         burn_dmg = fight.player_effects["burn"] * 3
+        # Сопротивление огню уменьшает урон
+        fire_res = player.get_fire_resistance()
+        if fire_res > 0:
+            burn_dmg = int(burn_dmg * (1 - fire_res / 100))
         fight.player_hp -= burn_dmg
         fight.player_effects["burn"] -= 1
         if fight.player_effects["burn"] <= 0:
@@ -584,6 +619,22 @@ async def end_fight(query, fight, player, victory: bool):
                 rare_drop = random.choice(RARE_DROPS[dungeon_id])
                 player.inventory[rare_drop] = player.inventory.get(rare_drop, 0) + 1
 
+        # Шанс дропа процедурного предмета (10% обычный моб, 30% босс)
+        from utils.helpers import generate_procedural_item
+        proc_drop = None
+        proc_drop_chance = 30 if fight.is_boss else 10
+        if random.randint(1, 100) <= proc_drop_chance:
+            dungeon_id = fight.dungeon_id
+            # Боссы дропают более качественные предметы
+            forced_rarity = "rare" if fight.is_boss and random.randint(1, 100) <= 50 else None
+            proc_item = generate_procedural_item(dungeon_id, forced_rarity=forced_rarity)
+            if proc_item:
+                proc_drop = proc_item
+                # Сохранить процедурный предмет
+                player.procedural_items[proc_item["id"]] = proc_item
+                # Добавить в инвентарь (количество = 1)
+                player.inventory[proc_item["id"]] = 1
+
         # Эпический дроп с босса (гарантированно 1 предмет сета)
         epic_drop = None
         dragon_scale_drop = 0
@@ -605,6 +656,7 @@ async def end_fight(query, fight, player, victory: bool):
 
         # Проверить повышение уровня
         level_up_text = ""
+        talent_text = ""
         while player.exp >= player.exp_to_level:
             player.exp -= player.exp_to_level
             player.level += 1
@@ -615,6 +667,13 @@ async def end_fight(query, fight, player, victory: bool):
             player.mana = player.get_max_mana()
 
             level_up_text = f"\n\n🎉 **УРОВЕНЬ {player.level}!**"
+
+            # Проверить, доступен ли талант на этом уровне
+            from data import TALENTS
+            if player.player_class and player.player_class in TALENTS:
+                if player.level in TALENTS[player.player_class]:
+                    player.pending_talent_levels.append(player.level)
+                    talent_text = "\n🌟 Доступен новый талант! (Профиль → Таланты)"
 
         # Обновить HP игрока
         player.hp = fight.player_hp
@@ -661,13 +720,19 @@ async def end_fight(query, fight, player, victory: bool):
         if fight.is_boss and dragon_scale_drop > 0:
             dragon_text = f"\n🐉 Чешуя дракона: +{dragon_scale_drop}"
 
+        # Текст о дропе процедурного предмета
+        proc_drop_text = ""
+        if proc_drop:
+            rarity_emoji = RARITY_EMOJI.get(proc_drop.get("rarity", "common"), "")
+            proc_drop_text = f"\n{rarity_emoji}🎁 НАХОДКА: {proc_drop['name']}!"
+
         text = f"""🎉 ПОБЕДА!
 
 {fight.enemy_emoji} {fight.enemy_name} повержен!
 
 💰 Золото: +{gold_gained}
 ⭐ Опыт: +{exp_gained}
-📦 {resource}: +{resource_amount}{dragon_text}{rare_drop_text}{epic_drop_text}{level_up_text}{achievement_text}"""
+📦 {resource}: +{resource_amount}{dragon_text}{rare_drop_text}{epic_drop_text}{proc_drop_text}{level_up_text}{talent_text}{achievement_text}"""
 
         # Кнопки
         if fight.is_boss:

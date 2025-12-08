@@ -530,6 +530,17 @@ class Player:
                 count += 1
         return count
 
+    def count_legendary_pieces(self) -> int:
+        """Подсчёт экипированных легендарных предметов"""
+        count = 0
+        for slot, item_id in self.equipment.items():
+            if not item_id:
+                continue
+            item = ITEMS.get(item_id, {})
+            if item.get("rarity") == "legendary":
+                count += 1
+        return count
+
     def update_quest_progress(self):
         """Обновить прогресс квестов на основе статистики"""
         from data import QUESTS

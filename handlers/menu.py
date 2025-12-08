@@ -108,6 +108,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🎁 Ежедневка", callback_data="daily")
         ],
         [
+            InlineKeyboardButton("⚔️ Арена", callback_data="arena"),
             InlineKeyboardButton("💤 Отдых", callback_data="rest")
         ]
     ]

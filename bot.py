@@ -39,6 +39,10 @@ from handlers.misc import (
     show_achievements, show_daily, claim_daily,
     rest, show_titles, select_title
 )
+from handlers.arena import (
+    show_arena, pvp_search, pvp_cancel, pvp_attack, pvp_block,
+    pvp_skill, pvp_forfeit, show_pvp_leaderboard
+)
 
 
 def main():
@@ -145,6 +149,16 @@ def main():
     app.add_handler(CallbackQueryHandler(rest, pattern="^rest$"))
     app.add_handler(CallbackQueryHandler(show_titles, pattern="^titles$"))
     app.add_handler(CallbackQueryHandler(select_title, pattern="^select_title_"))
+
+    # PvP Арена
+    app.add_handler(CallbackQueryHandler(show_arena, pattern="^arena$"))
+    app.add_handler(CallbackQueryHandler(pvp_search, pattern="^pvp_search$"))
+    app.add_handler(CallbackQueryHandler(pvp_cancel, pattern="^pvp_cancel$"))
+    app.add_handler(CallbackQueryHandler(pvp_attack, pattern="^pvp_attack$"))
+    app.add_handler(CallbackQueryHandler(pvp_block, pattern="^pvp_block$"))
+    app.add_handler(CallbackQueryHandler(pvp_skill, pattern="^pvp_skill_"))
+    app.add_handler(CallbackQueryHandler(pvp_forfeit, pattern="^pvp_forfeit$"))
+    app.add_handler(CallbackQueryHandler(show_pvp_leaderboard, pattern="^pvp_leaderboard$"))
 
     print("✅ Бот запущен! Нажми Ctrl+C для остановки.")
 

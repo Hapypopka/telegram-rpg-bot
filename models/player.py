@@ -97,6 +97,12 @@ class Player:
         # Процедурные предметы (id -> item_data)
         self.procedural_items = {}
 
+        # PvP статистика
+        self.pvp_rating = 1000  # Начальный рейтинг
+        self.pvp_wins = 0
+        self.pvp_losses = 0
+        self.pvp_win_streak = 0
+
     def to_dict(self) -> dict:
         """Сериализация в словарь"""
         return {
@@ -128,7 +134,11 @@ class Player:
             "item_sockets": self.item_sockets,
             "talents": self.talents,
             "pending_talent_levels": self.pending_talent_levels,
-            "procedural_items": self.procedural_items
+            "procedural_items": self.procedural_items,
+            "pvp_rating": self.pvp_rating,
+            "pvp_wins": self.pvp_wins,
+            "pvp_losses": self.pvp_losses,
+            "pvp_win_streak": self.pvp_win_streak
         }
 
     @classmethod
@@ -216,6 +226,16 @@ class Player:
         # Миграция: добавить процедурные предметы для старых игроков
         if "procedural_items" not in data:
             data["procedural_items"] = {}
+
+        # Миграция: добавить PvP статистику для старых игроков
+        if "pvp_rating" not in data:
+            data["pvp_rating"] = 1000
+        if "pvp_wins" not in data:
+            data["pvp_wins"] = 0
+        if "pvp_losses" not in data:
+            data["pvp_losses"] = 0
+        if "pvp_win_streak" not in data:
+            data["pvp_win_streak"] = 0
 
         for key, value in data.items():
             if hasattr(player, key):
@@ -512,10 +532,14 @@ class Player:
         for set_id, count in set_counts.items():
             if set_id in EPIC_SETS:
                 epic_set = EPIC_SETS[set_id]
-                if count >= 2 and "bonus_2" in epic_set:
+                if count >= 2 and "bonus_2_stats" in epic_set:
                     best_bonus = epic_set.get("bonus_2_stats", {})
-                if count >= 4 and "bonus_4" in epic_set:
+                if count >= 4 and "bonus_4_stats" in epic_set:
                     best_bonus = epic_set.get("bonus_4_stats", best_bonus)
+                if count >= 6 and "bonus_6_stats" in epic_set:
+                    best_bonus = epic_set.get("bonus_6_stats", best_bonus)
+                if count >= 8 and "bonus_8_stats" in epic_set:
+                    best_bonus = epic_set.get("bonus_8_stats", best_bonus)
 
         return best_bonus
 

@@ -529,6 +529,10 @@ EPIC_SETS = {
         "bonus_2_stats": {"hp": 30},
         "bonus_4": "+20% урона, при HP <30% урон +50%",
         "bonus_4_stats": {"hp": 50, "damage": 15},
+        "bonus_6": "+10% вампиризма, +25 защиты",
+        "bonus_6_stats": {"hp": 50, "damage": 15, "defense": 25, "lifesteal": 0.10},
+        "bonus_8": "Несокрушимый: +200 HP, +30 урона",
+        "bonus_8_stats": {"hp": 200, "damage": 30, "defense": 35, "lifesteal": 0.10},
         "boss": "forest"
     },
     "archmage": {
@@ -538,8 +542,12 @@ EPIC_SETS = {
                    "archmage_gloves", "archmage_boots", "archmage_ring", "archmage_pendant"],
         "bonus_2": "+25% маны",
         "bonus_2_stats": {"mana": 40},
-        "bonus_4": "Скиллы стоят на 30% меньше маны",
+        "bonus_4": "Скиллы -30% маны",
         "bonus_4_stats": {"mana": 80, "damage": 10},
+        "bonus_6": "+15 урона, +50 маны",
+        "bonus_6_stats": {"mana": 130, "damage": 25},
+        "bonus_8": "Архимаг: +20 урона, скиллы -50% маны",
+        "bonus_8_stats": {"mana": 180, "damage": 45, "mana_cost_reduction": 0.5},
         "boss": "mines"
     },
     "phantom": {
@@ -549,8 +557,12 @@ EPIC_SETS = {
                    "phantom_gloves", "phantom_boots", "phantom_ring", "phantom_necklace"],
         "bonus_2": "+20% шанс крита",
         "bonus_2_stats": {"crit": 15},
-        "bonus_4": "Криты наносят +75% урона и восстанавливают HP",
+        "bonus_4": "Криты +75% урона, восст. HP",
         "bonus_4_stats": {"crit": 25, "dodge": 10},
+        "bonus_6": "+15% уклонения, +10 урона",
+        "bonus_6_stats": {"crit": 25, "dodge": 25, "damage": 10},
+        "bonus_8": "Призрак: +20% уклон, криты x3 урона",
+        "bonus_8_stats": {"crit": 35, "dodge": 35, "damage": 20, "crit_mult": 3.0},
         "boss": "crypt"
     }
 }

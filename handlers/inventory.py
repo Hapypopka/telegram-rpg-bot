@@ -170,6 +170,10 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 set_text += f"\n  ✅ 2шт: {epic_set['bonus_2']}"
             if count >= 4:
                 set_text += f"\n  ✅ 4шт: {epic_set['bonus_4']}"
+            if count >= 6 and "bonus_6" in epic_set:
+                set_text += f"\n  ✅ 6шт: {epic_set['bonus_6']}"
+            if count >= 8 and "bonus_8" in epic_set:
+                set_text += f"\n  👑 8шт: {epic_set['bonus_8']}"
 
     text += set_text
 

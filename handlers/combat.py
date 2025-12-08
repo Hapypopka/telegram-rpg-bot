@@ -720,11 +720,7 @@ async def end_fight(query, fight, player, victory: bool):
         if fight.is_boss and dragon_scale_drop > 0:
             dragon_text = f"\n🐉 Чешуя дракона: +{dragon_scale_drop}"
 
-        # Текст о дропе процедурного предмета
-        proc_drop_text = ""
-        if proc_drop:
-            rarity_emoji = RARITY_EMOJI.get(proc_drop.get("rarity", "common"), "")
-            proc_drop_text = f"\n{rarity_emoji}🎁 НАХОДКА: {proc_drop['name']}!"
+        # Процедурные предметы добавляются молча (без текста)
 
         text = f"""🎉 ПОБЕДА!
 
@@ -732,7 +728,7 @@ async def end_fight(query, fight, player, victory: bool):
 
 💰 Золото: +{gold_gained}
 ⭐ Опыт: +{exp_gained}
-📦 {resource}: +{resource_amount}{dragon_text}{rare_drop_text}{epic_drop_text}{proc_drop_text}{level_up_text}{talent_text}{achievement_text}"""
+📦 {resource}: +{resource_amount}{dragon_text}{rare_drop_text}{epic_drop_text}{level_up_text}{talent_text}{achievement_text}"""
 
         # Кнопки
         if fight.is_boss:

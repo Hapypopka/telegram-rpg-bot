@@ -29,11 +29,11 @@ class PvPFight:
         # Статы
         self.p1_damage = player1.get_total_damage()
         self.p1_defense = player1.get_total_defense()
-        self.p1_crit = player1.get_total_crit()
+        self.p1_crit = player1.get_crit_chance()
 
         self.p2_damage = player2.get_total_damage()
         self.p2_defense = player2.get_total_defense()
-        self.p2_crit = player2.get_total_crit()
+        self.p2_crit = player2.get_crit_chance()
 
         # Чей ход (1 или 2)
         self.current_turn = 1

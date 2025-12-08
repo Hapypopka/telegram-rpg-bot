@@ -76,7 +76,8 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if count <= 0:
             continue
 
-        item = ITEMS.get(item_id, {})
+        # Проверить в ITEMS, затем в процедурных предметах
+        item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
         item_type = item.get("type", "unknown")
         emoji = item.get("emoji", "📦")
         name = item.get("name", item_id)
@@ -136,7 +137,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         emoji = slot_emojis.get(slot, "📦")
 
         if item_id:
-            item = ITEMS.get(item_id, {})
+            item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
             rarity = item.get("rarity", "common")
             rarity_emoji = RARITY_EMOJI.get(rarity, "")
             item_emoji = item.get("emoji", "")
@@ -236,7 +237,7 @@ async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if count <= 0:
             continue
 
-        item = ITEMS.get(item_id, {})
+        item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
         item_slot = item.get("slot")
 
         # Проверить совместимость слота
@@ -300,7 +301,7 @@ async def equip_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Проверить совместимость слота
-    item = ITEMS.get(item_id, {})
+    item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
     if item.get("slot") != slot:
         await query.answer("Предмет не подходит для этого слота!", show_alert=True)
         return
@@ -371,7 +372,7 @@ async def show_slot_items_direct(query, player, slot):
         if count <= 0:
             continue
 
-        item = ITEMS.get(item_id, {})
+        item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
         item_slot = item.get("slot")
 
         if item_slot != slot:
@@ -552,7 +553,7 @@ async def show_sell_menu(query, player):
         if count <= 0:
             continue
 
-        item = ITEMS.get(item_id, {})
+        item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
         price = item.get("price", 0)
         if price <= 0:
             continue
@@ -603,7 +604,7 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("Нет такого предмета!", show_alert=True)
             return
 
-        item = ITEMS.get(item_id, {})
+        item = ITEMS.get(item_id) or player.procedural_items.get(item_id, {})
         price = item.get("price", 0)
         rarity = item.get("rarity", "common")
 
@@ -613,6 +614,10 @@ async def sell_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         player.inventory[item_id] -= 1
         player.gold += sell_price
         player.stats["gold_earned"] = player.stats.get("gold_earned", 0) + sell_price
+
+        # Удалить процедурный предмет если продан последний
+        if player.inventory.get(item_id, 0) <= 0 and item_id in player.procedural_items:
+            del player.procedural_items[item_id]
 
         save_data()
         await query.answer(f"Продано за {sell_price} золота")

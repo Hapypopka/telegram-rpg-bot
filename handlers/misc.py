@@ -8,6 +8,7 @@ from telegram.ext import ContextTypes
 
 from data import ACHIEVEMENTS, DAILY_REWARDS, ITEMS
 from utils.storage import get_player, save_data
+from utils.helpers import safe_edit_message
 
 
 async def show_achievements(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -212,9 +213,7 @@ async def show_titles(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="profile")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def select_title(update: Update, context: ContextTypes.DEFAULT_TYPE):

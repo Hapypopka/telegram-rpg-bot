@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 
 from data import ITEMS, EPIC_SETS, RARITY_EMOJI, SLOT_NAMES
 from utils.storage import get_player, save_data
+from utils.helpers import safe_edit_message
 
 
 def get_item_stats_text(item: dict) -> str:
@@ -202,9 +203,7 @@ async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="inventory")]
     ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_slot_items(update: Update, context: ContextTypes.DEFAULT_TYPE):

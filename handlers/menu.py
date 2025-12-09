@@ -4,10 +4,11 @@
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
+from telegram.error import BadRequest
 
 from data import CLASSES, TALENTS
 from utils.storage import get_player, save_data
-from utils.helpers import create_hp_bar, create_mana_bar
+from utils.helpers import create_hp_bar, create_mana_bar, safe_edit_message
 from utils.avatar import generate_profile_image
 
 # Состояния для ConversationHandler
@@ -115,11 +116,23 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
+        try:
+            await update.callback_query.edit_message_text(
+                text, reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest as e:
+            if "no text" in str(e).lower():
+                # Сообщение с фото - удаляем и отправляем новое
+                await update.callback_query.message.delete()
+                await context.bot.send_message(
+                    chat_id=update.callback_query.message.chat_id,
+                    text=text,
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+            else:
+                raise
     else:
         await update.message.reply_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard)        )
+            text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_class_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -323,8 +336,7 @@ async def show_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="profile")]]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -356,8 +368,7 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="profile")]]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_talents(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -368,8 +379,8 @@ async def show_talents(update: Update, context: ContextTypes.DEFAULT_TYPE):
     player = get_player(query.from_user.id)
 
     if not player.player_class or player.player_class not in TALENTS:
-        await query.edit_message_text(
-            "❌ Таланты недоступны для твоего класса.",
+        await safe_edit_message(
+            query, context, "❌ Таланты недоступны для твоего класса.",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="profile")]])
         )
         return
@@ -426,9 +437,7 @@ async def show_talents(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="profile")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_talent_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -466,9 +475,7 @@ async def show_talent_choice(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     keyboard.append([InlineKeyboardButton("🔙 Отмена", callback_data="talents")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def select_talent(update: Update, context: ContextTypes.DEFAULT_TYPE):

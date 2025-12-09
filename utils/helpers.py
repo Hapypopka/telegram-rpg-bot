@@ -4,6 +4,7 @@
 
 import random
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 
 
 def create_hp_bar(current: int, maximum: int, length: int = 10) -> str:
@@ -18,6 +19,24 @@ def create_mana_bar(current: int, maximum: int, length: int = 10) -> str:
     filled = int(length * current / maximum) if maximum > 0 else 0
     filled = max(0, min(filled, length))
     return "▓" * filled + "░" * (length - filled)
+
+
+async def safe_edit_message(query, context, text: str, reply_markup=None, parse_mode=None):
+    """Безопасное редактирование сообщения (обрабатывает фото-сообщения)"""
+    try:
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except BadRequest as e:
+        if "no text" in str(e).lower():
+            # Сообщение с фото - удаляем и отправляем новое
+            await query.message.delete()
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+        else:
+            raise
 
 
 # Уровни открытия умений

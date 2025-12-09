@@ -15,14 +15,14 @@ class Player:
         self.level = 1
         self.exp = 0
         self.exp_to_level = 100
-        self.gold = 100
+        self.gold = 0  # Начинаем с 0 золота - хардкорный старт
 
         # HP/Мана (базовые, до выбора класса)
         self.hp = 100
         self.mana = 50
 
-        # Инвентарь
-        self.inventory = {"hp_potion_small": 3, "mana_potion_small": 2}
+        # Инвентарь - только базовые зелья для выживания
+        self.inventory = {"hp_potion_small": 2, "mana_potion_small": 1}
 
         # Экипировка (новая система слотов)
         self.equipment = {

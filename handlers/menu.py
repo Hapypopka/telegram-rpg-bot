@@ -8,6 +8,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from data import CLASSES, TALENTS
 from utils.storage import get_player, save_data
 from utils.helpers import create_hp_bar, create_mana_bar
+from utils.avatar import generate_profile_image
 
 # Состояния для ConversationHandler
 WAITING_NAME = 1
@@ -231,9 +232,23 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
     ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    # Генерируем изображение персонажа
+    try:
+        avatar_image = generate_profile_image(player)
+        # Удаляем старое сообщение и отправляем фото с caption
+        await query.message.delete()
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=avatar_image,
+            caption=text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    except Exception as e:
+        # Если не удалось сгенерировать - показываем текст
+        print(f"Ошибка генерации аватара: {e}")
+        await query.edit_message_text(
+            text, reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
 
 # Уровни открытия умений

@@ -88,68 +88,71 @@ ITEMS = {
     # --- COMMON (белое, в магазине) ---
     "rusty_sword": {
         "name": "Ржавый меч", "type": "weapon", "slot": "weapon",
-        "emoji": "🗡️", "damage": 5, "price": 50, "rarity": "common"
+        "emoji": "🗡️", "damage": 5, "price": 50, "rarity": "common", "min_level": 1
     },
     "iron_sword": {
         "name": "Железный меч", "type": "weapon", "slot": "weapon",
-        "emoji": "⚔️", "damage": 12, "price": 150, "rarity": "common"
+        "emoji": "⚔️", "damage": 12, "price": 150, "rarity": "common", "min_level": 2
     },
     "wooden_staff": {
         "name": "Деревянный посох", "type": "weapon", "slot": "weapon",
-        "emoji": "🪵", "damage": 8, "mana_bonus": 15, "price": 120, "rarity": "common"
+        "emoji": "🪵", "damage": 8, "mana_bonus": 15, "price": 120, "rarity": "common", "min_level": 1
     },
     "short_bow": {
         "name": "Короткий лук", "type": "weapon", "slot": "weapon",
-        "emoji": "🏹", "damage": 10, "crit_bonus": 3, "price": 130, "rarity": "common"
+        "emoji": "🏹", "damage": 10, "crit_bonus": 3, "price": 130, "rarity": "common", "min_level": 1
     },
 
     # --- RARE (синее, крафт/дроп) ---
     "steel_sword": {
         "name": "Стальной меч", "type": "weapon", "slot": "weapon",
         "emoji": "🔪", "damage": 20, "crit_bonus": 5, "price": 350, "rarity": "rare",
-        "craft": {"ore": 10, "leather": 5}
+        "craft": {"ore": 10, "leather": 5}, "min_level": 5
     },
     "magic_staff": {
         "name": "Магический посох", "type": "weapon", "slot": "weapon",
         "emoji": "🪄", "damage": 18, "mana_bonus": 30, "price": 400, "rarity": "rare",
-        "craft": {"crystal": 5, "essence": 3}
+        "craft": {"crystal": 5, "essence": 3}, "min_level": 5
     },
     "hunter_bow": {
         "name": "Охотничий лук", "type": "weapon", "slot": "weapon",
         "emoji": "🎯", "damage": 15, "crit_bonus": 10, "price": 380, "rarity": "rare",
-        "craft": {"leather": 8, "herb": 5}
+        "craft": {"leather": 8, "herb": 5}, "min_level": 5
     },
     "flame_sword": {
         "name": "Пламенный меч", "type": "weapon", "slot": "weapon",
         "emoji": "🔥", "damage": 35, "burn": 3, "crit_mult": 1.7, "price": 800, "rarity": "rare",
-        "craft": {"ore": 15, "essence": 10, "demon_soul": 2}
+        "craft": {"ore": 15, "essence": 10, "demon_soul": 2}, "min_level": 10
     },
     "frost_staff": {
         "name": "Ледяной посох", "type": "weapon", "slot": "weapon",
         "emoji": "❄️", "damage": 30, "mana_bonus": 40, "slow": True, "price": 900, "rarity": "rare",
-        "craft": {"crystal": 10, "essence": 8}
+        "craft": {"crystal": 10, "essence": 8}, "min_level": 10
     },
     "shadow_dagger": {
         "name": "Теневой кинжал", "type": "weapon", "slot": "weapon",
         "emoji": "🌑", "damage": 28, "crit_bonus": 15, "crit_mult": 2.0, "price": 750, "rarity": "rare",
-        "craft": {"ore": 8, "essence": 12}
+        "craft": {"ore": 8, "essence": 12}, "min_level": 10
     },
 
     # --- EPIC (фиолетовое, с боссов) ---
+    # Titan set - теперь с Крипты (lvl 10)
     "titans_blade": {
         "name": "Клинок Титана", "type": "weapon", "slot": "weapon",
         "emoji": "⚔️", "damage": 45, "hp_bonus": 30, "crit_mult": 1.8, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
+    # Archmage set - теперь с Бездны (lvl 15)
     "archmage_staff": {
         "name": "Посох Архимага", "type": "weapon", "slot": "weapon",
         "emoji": "🔮", "damage": 40, "mana_bonus": 60, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
+    # Phantom set - теперь с Хаоса (lvl 20)
     "phantom_bow": {
         "name": "Фантомный лук", "type": "weapon", "slot": "weapon",
         "emoji": "👻", "damage": 38, "crit_bonus": 20, "crit_mult": 2.2, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -159,40 +162,40 @@ ITEMS = {
     # --- COMMON ---
     "leather_cap": {
         "name": "Кожаная шапка", "type": "armor", "slot": "helmet",
-        "emoji": "🧢", "defense": 3, "price": 40, "rarity": "common"
+        "emoji": "🧢", "defense": 3, "price": 40, "rarity": "common", "min_level": 1
     },
     "iron_helm": {
         "name": "Железный шлем", "type": "armor", "slot": "helmet",
-        "emoji": "⛑️", "defense": 6, "hp_bonus": 10, "price": 100, "rarity": "common"
+        "emoji": "⛑️", "defense": 6, "hp_bonus": 10, "price": 100, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "steel_helm": {
         "name": "Стальной шлем", "type": "armor", "slot": "helmet",
         "emoji": "🪖", "defense": 10, "hp_bonus": 20, "price": 250, "rarity": "rare",
-        "craft": {"ore": 8, "leather": 3}
+        "craft": {"ore": 8, "leather": 3}, "min_level": 5
     },
     "mage_hood": {
         "name": "Капюшон мага", "type": "armor", "slot": "helmet",
         "emoji": "🎭", "defense": 5, "mana_bonus": 25, "price": 230, "rarity": "rare",
-        "craft": {"cloth": 10, "crystal": 3}
+        "craft": {"cloth": 10, "crystal": 3}, "min_level": 5
     },
 
     # --- EPIC ---
     "titan_helm": {
         "name": "Шлем Титана", "type": "armor", "slot": "helmet",
         "emoji": "👑", "defense": 15, "hp_bonus": 40, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_crown": {
         "name": "Корона Архимага", "type": "armor", "slot": "helmet",
         "emoji": "👑", "defense": 8, "mana_bonus": 50, "damage_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_mask": {
         "name": "Маска Фантома", "type": "armor", "slot": "helmet",
         "emoji": "🎭", "defense": 10, "crit_bonus": 12, "dodge_bonus": 8, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -202,35 +205,35 @@ ITEMS = {
     # --- COMMON ---
     "leather_pads": {
         "name": "Кожаные наплечники", "type": "armor", "slot": "shoulders",
-        "emoji": "🦺", "defense": 2, "price": 35, "rarity": "common"
+        "emoji": "🦺", "defense": 2, "price": 35, "rarity": "common", "min_level": 1
     },
     "iron_pauldrons": {
         "name": "Железные наплечи", "type": "armor", "slot": "shoulders",
-        "emoji": "🛡️", "defense": 5, "price": 90, "rarity": "common"
+        "emoji": "🛡️", "defense": 5, "price": 90, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "steel_pauldrons": {
         "name": "Стальные наплечи", "type": "armor", "slot": "shoulders",
         "emoji": "⚙️", "defense": 9, "hp_bonus": 15, "price": 220, "rarity": "rare",
-        "craft": {"ore": 6, "leather": 4}
+        "craft": {"ore": 6, "leather": 4}, "min_level": 5
     },
 
     # --- EPIC ---
     "titan_shoulders": {
         "name": "Наплечи Титана", "type": "armor", "slot": "shoulders",
         "emoji": "💪", "defense": 14, "hp_bonus": 30, "damage_bonus": 5, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_mantle": {
         "name": "Оплечье Архимага", "type": "armor", "slot": "shoulders",
         "emoji": "✨", "defense": 7, "mana_bonus": 35, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_cape": {
         "name": "Накидка Фантома", "type": "armor", "slot": "shoulders",
         "emoji": "🌫️", "defense": 8, "dodge_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -240,45 +243,45 @@ ITEMS = {
     # --- COMMON ---
     "leather_vest": {
         "name": "Кожаный жилет", "type": "armor", "slot": "chest",
-        "emoji": "🥋", "defense": 5, "price": 60, "rarity": "common"
+        "emoji": "🥋", "defense": 5, "price": 60, "rarity": "common", "min_level": 1
     },
     "chainmail": {
         "name": "Кольчуга", "type": "armor", "slot": "chest",
-        "emoji": "⛓️", "defense": 10, "price": 180, "rarity": "common"
+        "emoji": "⛓️", "defense": 10, "price": 180, "rarity": "common", "min_level": 3
     },
     # --- LEGACY (старые предметы для совместимости) ---
     "firearmor": {
         "name": "Огненная броня", "type": "armor", "slot": "chest",
-        "emoji": "🔥", "defense": 15, "hp_bonus": 25, "fire_res": 30, "price": 400, "rarity": "rare"
+        "emoji": "🔥", "defense": 15, "hp_bonus": 25, "fire_res": 30, "price": 400, "rarity": "rare", "min_level": 8
     },
 
     # --- RARE ---
     "plate_armor": {
         "name": "Латный доспех", "type": "armor", "slot": "chest",
         "emoji": "🛡️", "defense": 18, "hp_bonus": 25, "block": 5, "price": 450, "rarity": "rare",
-        "craft": {"ore": 15, "leather": 5}
+        "craft": {"ore": 15, "leather": 5}, "min_level": 7
     },
     "mage_robe": {
         "name": "Мантия мага", "type": "armor", "slot": "chest",
         "emoji": "🧥", "defense": 8, "mana_bonus": 40, "price": 400, "rarity": "rare",
-        "craft": {"cloth": 15, "crystal": 5}
+        "craft": {"cloth": 15, "crystal": 5}, "min_level": 7
     },
 
     # --- EPIC ---
     "titan_plate": {
         "name": "Латы Титана", "type": "armor", "slot": "chest",
         "emoji": "🎽", "defense": 25, "hp_bonus": 60, "block": 10, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_robe": {
         "name": "Мантия Архимага", "type": "armor", "slot": "chest",
         "emoji": "🧥", "defense": 12, "mana_bonus": 70, "mana_regen": 5, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_cloak": {
         "name": "Плащ Фантома", "type": "armor", "slot": "chest",
         "emoji": "🌑", "defense": 15, "dodge_bonus": 15, "crit_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -288,18 +291,18 @@ ITEMS = {
     # --- COMMON ---
     "leather_belt": {
         "name": "Кожаный пояс", "type": "armor", "slot": "belt",
-        "emoji": "🎗️", "defense": 2, "price": 30, "rarity": "common"
+        "emoji": "🎗️", "defense": 2, "price": 30, "rarity": "common", "min_level": 1
     },
     "iron_belt": {
         "name": "Железный пояс", "type": "armor", "slot": "belt",
-        "emoji": "⚙️", "defense": 4, "hp_bonus": 10, "price": 80, "rarity": "common"
+        "emoji": "⚙️", "defense": 4, "hp_bonus": 10, "price": 80, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "steel_belt": {
         "name": "Стальной пояс", "type": "armor", "slot": "belt",
         "emoji": "🔗", "defense": 7, "hp_bonus": 20, "price": 200, "rarity": "rare",
-        "craft": {"ore": 5, "leather": 3}
+        "craft": {"ore": 5, "leather": 3}, "min_level": 5
     },
 
     # =====================
@@ -309,40 +312,40 @@ ITEMS = {
     # --- COMMON ---
     "leather_gloves": {
         "name": "Кожаные перчатки", "type": "armor", "slot": "gloves",
-        "emoji": "🧤", "defense": 2, "price": 35, "rarity": "common"
+        "emoji": "🧤", "defense": 2, "price": 35, "rarity": "common", "min_level": 1
     },
     "iron_gauntlets": {
         "name": "Железные рукавицы", "type": "armor", "slot": "gloves",
-        "emoji": "🥊", "defense": 4, "damage_bonus": 3, "price": 95, "rarity": "common"
+        "emoji": "🥊", "defense": 4, "damage_bonus": 3, "price": 95, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "steel_gauntlets": {
         "name": "Стальные латные перчатки", "type": "armor", "slot": "gloves",
         "emoji": "🤜", "defense": 8, "damage_bonus": 8, "price": 240, "rarity": "rare",
-        "craft": {"ore": 6, "leather": 4}
+        "craft": {"ore": 6, "leather": 4}, "min_level": 5
     },
     "mage_gloves": {
         "name": "Перчатки чародея", "type": "armor", "slot": "gloves",
         "emoji": "🪬", "defense": 4, "mana_bonus": 20, "crit_bonus": 5, "price": 220, "rarity": "rare",
-        "craft": {"cloth": 8, "crystal": 3}
+        "craft": {"cloth": 8, "crystal": 3}, "min_level": 5
     },
 
     # --- EPIC ---
     "titan_gauntlets": {
         "name": "Рукавицы Титана", "type": "armor", "slot": "gloves",
         "emoji": "🤜", "defense": 12, "damage_bonus": 15, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_gloves": {
         "name": "Перчатки Архимага", "type": "armor", "slot": "gloves",
         "emoji": "✋", "defense": 6, "mana_bonus": 30, "damage_bonus": 12, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_gloves": {
         "name": "Перчатки Фантома", "type": "armor", "slot": "gloves",
         "emoji": "🧤", "defense": 8, "crit_bonus": 18, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -352,18 +355,18 @@ ITEMS = {
     # --- COMMON ---
     "leather_pants": {
         "name": "Кожаные штаны", "type": "armor", "slot": "leggings",
-        "emoji": "👖", "defense": 3, "price": 45, "rarity": "common"
+        "emoji": "👖", "defense": 3, "price": 45, "rarity": "common", "min_level": 1
     },
     "chainmail_legs": {
         "name": "Кольчужные поножи", "type": "armor", "slot": "leggings",
-        "emoji": "⛓️", "defense": 7, "price": 130, "rarity": "common"
+        "emoji": "⛓️", "defense": 7, "price": 130, "rarity": "common", "min_level": 3
     },
 
     # --- RARE ---
     "plate_legs": {
         "name": "Латные поножи", "type": "armor", "slot": "leggings",
         "emoji": "🦿", "defense": 12, "hp_bonus": 20, "price": 320, "rarity": "rare",
-        "craft": {"ore": 10, "leather": 4}
+        "craft": {"ore": 10, "leather": 4}, "min_level": 6
     },
 
     # =====================
@@ -373,40 +376,40 @@ ITEMS = {
     # --- COMMON ---
     "leather_boots": {
         "name": "Кожаные сапоги", "type": "armor", "slot": "boots",
-        "emoji": "👢", "defense": 2, "price": 40, "rarity": "common"
+        "emoji": "👢", "defense": 2, "price": 40, "rarity": "common", "min_level": 1
     },
     "iron_boots": {
         "name": "Железные сапоги", "type": "armor", "slot": "boots",
-        "emoji": "🥾", "defense": 5, "price": 110, "rarity": "common"
+        "emoji": "🥾", "defense": 5, "price": 110, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "steel_boots": {
         "name": "Стальные сапоги", "type": "armor", "slot": "boots",
         "emoji": "🦶", "defense": 9, "hp_bonus": 15, "price": 270, "rarity": "rare",
-        "craft": {"ore": 7, "leather": 5}
+        "craft": {"ore": 7, "leather": 5}, "min_level": 5
     },
     "swift_boots": {
         "name": "Быстрые сапоги", "type": "armor", "slot": "boots",
         "emoji": "💨", "defense": 5, "dodge_bonus": 8, "price": 300, "rarity": "rare",
-        "craft": {"leather": 10, "herb": 5}
+        "craft": {"leather": 10, "herb": 5}, "min_level": 6
     },
 
     # --- EPIC ---
     "titan_boots": {
         "name": "Сапоги Титана", "type": "armor", "slot": "boots",
         "emoji": "👢", "defense": 14, "hp_bonus": 35, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_boots": {
         "name": "Сапоги Архимага", "type": "armor", "slot": "boots",
         "emoji": "👟", "defense": 7, "mana_bonus": 25, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_boots": {
         "name": "Сапоги Фантома", "type": "armor", "slot": "boots",
         "emoji": "👣", "defense": 9, "dodge_bonus": 12, "crit_bonus": 5, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -416,50 +419,50 @@ ITEMS = {
     # --- COMMON ---
     "copper_ring": {
         "name": "Медное кольцо", "type": "accessory", "slot": "ring",
-        "emoji": "💍", "crit_bonus": 3, "price": 50, "rarity": "common"
+        "emoji": "💍", "crit_bonus": 3, "price": 50, "rarity": "common", "min_level": 1
     },
     "iron_ring": {
         "name": "Железное кольцо", "type": "accessory", "slot": "ring",
-        "emoji": "💍", "damage_bonus": 5, "price": 80, "rarity": "common"
+        "emoji": "💍", "damage_bonus": 5, "price": 80, "rarity": "common", "min_level": 2
     },
     # --- LEGACY (старые предметы для совместимости) ---
     "berserkercharm": {
         "name": "Амулет берсерка", "type": "accessory", "slot": "ring",
-        "emoji": "💢", "damage_bonus": 10, "berserker": True, "price": 350, "rarity": "rare"
+        "emoji": "💢", "damage_bonus": 10, "berserker": True, "price": 350, "rarity": "rare", "min_level": 8
     },
 
     # --- RARE ---
     "lucky_ring": {
         "name": "Кольцо удачи", "type": "accessory", "slot": "ring",
         "emoji": "🍀", "crit_bonus": 12, "price": 400, "rarity": "rare",
-        "craft": {"crystal": 5, "essence": 3}
+        "craft": {"crystal": 5, "essence": 3}, "min_level": 6
     },
     "vampire_ring": {
         "name": "Кольцо вампира", "type": "accessory", "slot": "ring",
         "emoji": "🩸", "lifesteal": 0.1, "price": 600, "rarity": "rare",
-        "craft": {"essence": 10, "demon_soul": 2}
+        "craft": {"essence": 10, "demon_soul": 2}, "min_level": 12
     },
     "berserker_ring": {
         "name": "Кольцо берсерка", "type": "accessory", "slot": "ring",
         "emoji": "🔥", "damage_bonus": 12, "berserker": True, "price": 550, "rarity": "rare",
-        "craft": {"ore": 8, "demon_soul": 3}
+        "craft": {"ore": 8, "demon_soul": 3}, "min_level": 10
     },
 
     # --- EPIC ---
     "titan_ring": {
         "name": "Кольцо Титана", "type": "accessory", "slot": "ring",
         "emoji": "💍", "hp_bonus": 50, "damage_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_ring": {
         "name": "Кольцо Архимага", "type": "accessory", "slot": "ring",
         "emoji": "💍", "mana_bonus": 50, "damage_bonus": 8, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_ring": {
         "name": "Кольцо Фантома", "type": "accessory", "slot": "ring",
         "emoji": "💍", "crit_bonus": 15, "dodge_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 
     # =====================
@@ -469,56 +472,60 @@ ITEMS = {
     # --- COMMON ---
     "bone_necklace": {
         "name": "Костяное ожерелье", "type": "accessory", "slot": "necklace",
-        "emoji": "📿", "hp_bonus": 15, "price": 60, "rarity": "common"
+        "emoji": "📿", "hp_bonus": 15, "price": 60, "rarity": "common", "min_level": 1
     },
     "silver_pendant": {
         "name": "Серебряный кулон", "type": "accessory", "slot": "necklace",
-        "emoji": "🔗", "defense_bonus": 5, "price": 90, "rarity": "common"
+        "emoji": "🔗", "defense_bonus": 5, "price": 90, "rarity": "common", "min_level": 2
     },
 
     # --- RARE ---
     "power_amulet": {
         "name": "Амулет силы", "type": "accessory", "slot": "necklace",
         "emoji": "📿", "damage_bonus": 15, "price": 450, "rarity": "rare",
-        "craft": {"crystal": 5, "ore": 5}
+        "craft": {"crystal": 5, "ore": 5}, "min_level": 7
     },
     "life_pendant": {
         "name": "Кулон жизни", "type": "accessory", "slot": "necklace",
         "emoji": "💚", "hp_bonus": 60, "price": 500, "rarity": "rare",
-        "craft": {"herb": 15, "crystal": 3}
+        "craft": {"herb": 15, "crystal": 3}, "min_level": 6
     },
     "mana_crystal_necklace": {
         "name": "Ожерелье маны", "type": "accessory", "slot": "necklace",
         "emoji": "💎", "mana_bonus": 50, "price": 480, "rarity": "rare",
-        "craft": {"crystal": 8, "essence": 5}
+        "craft": {"crystal": 8, "essence": 5}, "min_level": 6
     },
     "shadow_medallion": {
         "name": "Медальон теней", "type": "accessory", "slot": "necklace",
         "emoji": "🌑", "dodge_bonus": 15, "crit_bonus": 8, "price": 700, "rarity": "rare",
-        "craft": {"essence": 12, "demon_soul": 3}
+        "craft": {"essence": 12, "demon_soul": 3}, "min_level": 12
     },
 
     # --- EPIC ---
     "titan_amulet": {
         "name": "Амулет Титана", "type": "accessory", "slot": "necklace",
         "emoji": "🏅", "hp_bonus": 40, "defense_bonus": 10, "price": 0, "rarity": "epic",
-        "set": "titan", "boss_drop": "forest"
+        "set": "titan", "boss_drop": "crypt", "min_level": 10
     },
     "archmage_pendant": {
         "name": "Кулон Архимага", "type": "accessory", "slot": "necklace",
         "emoji": "🔮", "mana_bonus": 60, "damage_bonus": 15, "price": 0, "rarity": "epic",
-        "set": "archmage", "boss_drop": "mines"
+        "set": "archmage", "boss_drop": "abyss", "min_level": 15
     },
     "phantom_necklace": {
         "name": "Ожерелье Фантома", "type": "accessory", "slot": "necklace",
         "emoji": "👻", "crit_bonus": 20, "lifesteal": 0.08, "price": 0, "rarity": "epic",
-        "set": "phantom", "boss_drop": "crypt"
+        "set": "phantom", "boss_drop": "chaos", "min_level": 20
     },
 }
 
 # =====================
 # ЭПИЧЕСКИЕ СЕТЫ
 # =====================
+# Перебалансированы по подземельям:
+# - Titan: Крипта (lvl 10)
+# - Archmage: Бездна (lvl 15)
+# - Phantom: Хаос (lvl 20)
 EPIC_SETS = {
     "titan": {
         "name": "Гнев Титана",
@@ -533,7 +540,8 @@ EPIC_SETS = {
         "bonus_6_stats": {"hp": 50, "damage": 15, "defense": 25, "lifesteal": 0.10},
         "bonus_8": "Несокрушимый: +200 HP, +30 урона",
         "bonus_8_stats": {"hp": 200, "damage": 30, "defense": 35, "lifesteal": 0.10},
-        "boss": "forest"
+        "boss": "crypt",
+        "min_level": 10
     },
     "archmage": {
         "name": "Покров Архимага",
@@ -548,7 +556,8 @@ EPIC_SETS = {
         "bonus_6_stats": {"mana": 130, "damage": 25},
         "bonus_8": "Архимаг: +20 урона, скиллы -50% маны",
         "bonus_8_stats": {"mana": 180, "damage": 45, "mana_cost_reduction": 0.5},
-        "boss": "mines"
+        "boss": "abyss",
+        "min_level": 15
     },
     "phantom": {
         "name": "Тень Фантома",
@@ -563,13 +572,15 @@ EPIC_SETS = {
         "bonus_6_stats": {"crit": 25, "dodge": 25, "damage": 10},
         "bonus_8": "Призрак: +20% уклон, криты x3 урона",
         "bonus_8_stats": {"crit": 35, "dodge": 35, "damage": 20, "crit_mult": 3.0},
-        "boss": "crypt"
+        "boss": "chaos",
+        "min_level": 20
     }
 }
 
 # =====================
 # ЛЕГЕНДАРНОЕ ОРУЖИЕ (квестовое)
 # =====================
+# Требует уровень 25+ для экипировки (эндгейм контент)
 LEGENDARY_WEAPONS = {
     "excalibur": {
         "name": "Экскалибур",
@@ -584,7 +595,8 @@ LEGENDARY_WEAPONS = {
         "rarity": "legendary",
         "class": "warrior",
         "quest_chain": "warrior_legend",
-        "description": "Легендарный меч, выкованный в пламени древних драконов"
+        "description": "Легендарный меч, выкованный в пламени древних драконов",
+        "min_level": 25
     },
     "staff_of_eternity": {
         "name": "Посох Вечности",
@@ -599,7 +611,8 @@ LEGENDARY_WEAPONS = {
         "rarity": "legendary",
         "class": "mage",
         "quest_chain": "mage_legend",
-        "description": "Древний посох, хранящий мудрость тысячелетий"
+        "description": "Древний посох, хранящий мудрость тысячелетий",
+        "min_level": 25
     },
     "bow_of_the_wind": {
         "name": "Лук Ветра",
@@ -614,7 +627,8 @@ LEGENDARY_WEAPONS = {
         "rarity": "legendary",
         "class": "archer",
         "quest_chain": "archer_legend",
-        "description": "Лук, стреляющий со скоростью ветра"
+        "description": "Лук, стреляющий со скоростью ветра",
+        "min_level": 25
     }
 }
 

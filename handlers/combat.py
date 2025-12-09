@@ -660,7 +660,9 @@ async def end_fight(query, fight, player, victory: bool):
         while player.exp >= player.exp_to_level:
             player.exp -= player.exp_to_level
             player.level += 1
-            player.exp_to_level = int(player.exp_to_level * 1.2)
+            # Экспоненциальный рост: 100 -> 140 -> 196 -> 274 -> 384...
+            # Lvl 5: ~384 exp, Lvl 10: ~2070 exp, Lvl 15: ~11150 exp, Lvl 20: ~60000 exp
+            player.exp_to_level = int(player.exp_to_level * 1.4)
 
             # Восстановить HP и ману при левел-апе
             player.hp = player.get_max_hp()

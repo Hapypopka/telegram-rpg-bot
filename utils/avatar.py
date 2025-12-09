@@ -35,13 +35,26 @@ def asset_exists(layer: str, filename: str) -> bool:
     return os.path.exists(get_asset_path(layer, filename))
 
 
-def load_sprite(layer: str, filename: str) -> Optional[Image.Image]:
-    """Загрузить спрайт с прозрачностью"""
+def load_sprite(layer: str, filename: str, scale: float = 2.0, center: bool = True) -> Optional[Image.Image]:
+    """Загрузить спрайт с прозрачностью, масштабировать и центрировать"""
     path = get_asset_path(layer, filename)
     if os.path.exists(path):
         try:
             img = Image.open(path).convert("RGBA")
-            return img.resize(AVATAR_SIZE, Image.Resampling.LANCZOS)
+
+            # Масштабируем спрайт (например 128x128 -> 256x256)
+            new_size = (int(img.width * scale), int(img.height * scale))
+            img = img.resize(new_size, Image.Resampling.NEAREST)  # NEAREST для пиксель-арта
+
+            if center:
+                # Создаём холст нужного размера и центрируем спрайт
+                canvas = Image.new("RGBA", AVATAR_SIZE, (0, 0, 0, 0))
+                x = (AVATAR_SIZE[0] - img.width) // 2
+                y = (AVATAR_SIZE[1] - img.height) // 2
+                canvas.paste(img, (x, y), img)
+                return canvas
+            else:
+                return img
         except Exception as e:
             print(f"Ошибка загрузки спрайта {path}: {e}")
     return None
@@ -93,6 +106,30 @@ def create_placeholder_avatar(player_class: str, level: int) -> Image.Image:
     return img
 
 
+def create_gradient_background(size: tuple, color1: tuple, color2: tuple) -> Image.Image:
+    """Создать градиентный фон"""
+    img = Image.new("RGBA", size, color1)
+    draw = ImageDraw.Draw(img)
+
+    for y in range(size[1]):
+        ratio = y / size[1]
+        r = int(color1[0] * (1 - ratio) + color2[0] * ratio)
+        g = int(color1[1] * (1 - ratio) + color2[1] * ratio)
+        b = int(color1[2] * (1 - ratio) + color2[2] * ratio)
+        draw.line([(0, y), (size[0], y)], fill=(r, g, b, 255))
+
+    return img
+
+
+# Цвета фона для классов
+CLASS_BACKGROUNDS = {
+    "warrior": ((60, 30, 30), (30, 15, 15)),      # Тёмно-красный
+    "mage": ((30, 30, 60), (15, 15, 40)),          # Тёмно-синий
+    "archer": ((30, 50, 30), (15, 30, 15)),        # Тёмно-зелёный
+    "paladin": ((50, 50, 30), (30, 30, 15))        # Тёмно-жёлтый
+}
+
+
 def generate_character_image(
     player_class: str,
     level: int,
@@ -114,6 +151,10 @@ def generate_character_image(
     equipment = equipment or {}
     effects = effects or []
 
+    # Создаём градиентный фон
+    bg_colors = CLASS_BACKGROUNDS.get(player_class, ((40, 40, 50), (20, 20, 30)))
+    final = create_gradient_background(AVATAR_SIZE, bg_colors[0], bg_colors[1])
+
     # Пытаемся загрузить базовый спрайт класса
     base_sprite_name = CLASS_SPRITES.get(player_class, "warrior.png")
     base = load_sprite("base", base_sprite_name)
@@ -122,9 +163,8 @@ def generate_character_image(
         # Нет спрайтов - используем заглушку
         base = create_placeholder_avatar(player_class, level)
 
-    # Создаём финальное изображение
-    final = Image.new("RGBA", AVATAR_SIZE, (0, 0, 0, 0))
-    final.paste(base, (0, 0), base)
+    # Накладываем персонажа на фон
+    final = Image.alpha_composite(final, base)
 
     # Накладываем слои экипировки
     slot_to_layer = {

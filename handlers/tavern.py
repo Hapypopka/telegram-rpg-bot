@@ -11,6 +11,7 @@ from data import (
     ALCHEMY_RECIPES, QUESTS, ITEMS, SLOT_NAMES, LEGENDARY_CRAFT_RECIPES, RARITY_EMOJI, SOCKETS
 )
 from utils.storage import get_player, save_data
+from utils.helpers import safe_edit_message
 
 
 async def show_tavern(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,8 +40,7 @@ async def show_tavern(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
     ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_food_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -765,8 +765,7 @@ async def show_quests(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def claim_quest_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):

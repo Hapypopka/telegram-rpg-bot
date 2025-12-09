@@ -112,9 +112,7 @@ async def show_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
     ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_equipment(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -452,9 +450,7 @@ async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
     ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_shop_category(update: Update, context: ContextTypes.DEFAULT_TYPE):

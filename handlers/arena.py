@@ -11,7 +11,7 @@ from telegram.error import BadRequest
 from data import CLASSES
 from models.pvp_fight import PvPFight
 from utils.storage import get_player, save_data, players
-from utils.helpers import create_hp_bar, create_mana_bar
+from utils.helpers import create_hp_bar, create_mana_bar, safe_edit_message
 
 # Очередь поиска матча: {user_id: {"player": Player, "time": datetime, "chat_id": int}}
 pvp_queue = {}
@@ -95,9 +95,7 @@ async def show_arena(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔙 Назад", callback_data="menu")]
         ]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def pvp_search(update: Update, context: ContextTypes.DEFAULT_TYPE):

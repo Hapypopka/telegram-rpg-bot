@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 from data import DUNGEONS
 from models import Fight
 from utils.storage import get_player, save_data
-from utils.helpers import update_fight_ui
+from utils.helpers import update_fight_ui, safe_edit_message
 
 
 # Активные бои
@@ -43,9 +43,7 @@ async def show_dungeons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def select_dungeon(update: Update, context: ContextTypes.DEFAULT_TYPE):

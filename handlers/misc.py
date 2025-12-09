@@ -36,9 +36,7 @@ async def show_achievements(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="menu")]]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -84,9 +82,7 @@ async def show_daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="menu")])
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def claim_daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -170,9 +166,7 @@ async def rest(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="menu")]]
 
-    await query.edit_message_text(
-        text, reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await safe_edit_message(query, context, text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_titles(update: Update, context: ContextTypes.DEFAULT_TYPE):

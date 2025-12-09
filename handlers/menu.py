@@ -80,16 +80,16 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     class_name = class_data.get("name", "Неизвестно")
     class_emoji = class_data.get("emoji", "")
 
-    text = f"""🏰 **ТЕНИ ПОДЗЕМЕЛИЙ** 🏰
+    text = f"""🏰 ТЕНИ ПОДЗЕМЕЛИЙ 🏰
 
-{title_text}**{player.name}{class_emoji} {class_name} | Ур. {player.level}
+{title_text}{player.name} {class_emoji} {class_name} | Ур. {player.level}
 
 ❤️ HP: [{hp_bar}] {player.hp}/{player.get_max_hp()}
 💙 MP: [{mana_bar}] {player.mana}/{player.get_max_mana()}
 ⭐ Опыт: {player.exp}/{player.exp_to_level}
 💰 Золото: {player.gold}
 
-📍 Текущее подземелье: {player.current_dungeon or "Нет"}
+📍 Подземелье: {player.current_dungeon or "Нет"}
 🏠 Этаж: {player.current_floor}"""
 
     keyboard = [
@@ -115,24 +115,42 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
 
-    if update.callback_query:
-        try:
-            await update.callback_query.edit_message_text(
-                text, reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest as e:
-            if "no text" in str(e).lower():
-                # Сообщение с фото - удаляем и отправляем новое
+    # Генерируем изображение персонажа
+    try:
+        avatar_image = generate_profile_image(player)
+
+        if update.callback_query:
+            # Удаляем старое сообщение и отправляем фото
+            await update.callback_query.message.delete()
+            await context.bot.send_photo(
+                chat_id=update.callback_query.message.chat_id,
+                photo=avatar_image,
+                caption=text,
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await update.message.reply_photo(
+                photo=avatar_image,
+                caption=text,
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+    except Exception as e:
+        # Если ошибка - показываем без фото
+        print(f"Ошибка генерации аватара в меню: {e}")
+        if update.callback_query:
+            try:
+                await update.callback_query.edit_message_text(
+                    text, reply_markup=InlineKeyboardMarkup(keyboard))
+            except BadRequest:
                 await update.callback_query.message.delete()
                 await context.bot.send_message(
                     chat_id=update.callback_query.message.chat_id,
                     text=text,
                     reply_markup=InlineKeyboardMarkup(keyboard)
                 )
-            else:
-                raise
-    else:
-        await update.message.reply_text(
-            text, reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await update.message.reply_text(
+                text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_class_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
